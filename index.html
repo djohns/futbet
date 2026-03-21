@@ -3,112 +3,183 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PROMPT MAESTRO - Dashboard Analítico 20-03-2026</title>
+    <title>Futbet 2 - Dashboard Interactivo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
-        .chart-container { position: relative; width: 100%; max-width: 100%; margin: auto; height: 320px; max-height: 400px; }
-        @media (min-width: 768px) { .chart-container { height: 380px; } }
-        .tab-active { border-bottom: 2px solid #0f172a; color: #0f172a; font-weight: 600; }
-        .tab-inactive { border-bottom: 2px solid transparent; color: #64748b; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; overflow-x: hidden; }
+        
+        .chart-container { 
+            position: relative; 
+            width: 100%; 
+            max-width: 600px; 
+            margin-left: auto; 
+            margin-right: auto; 
+            height: 300px; 
+            max-height: 400px; 
+        }
+
+        .nav-active {
+            background-color: #f1f5f9;
+            color: #0f172a;
+            border-bottom: 3px solid #0f172a;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-nav-text { font-size: 0.75rem; }
+            .chart-container { height: 250px; }
+        }
+
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
     </style>
 
-    <!-- Chosen Palette: Clean Professional Analytics (Slate-50, Emerald, Amber, Rose) -->
-    <!-- Application Structure Plan: Navigation focused on Calibration, Daily Operation, and Bankroll. The "Operativa" section is divided into chronological blocks (Mañana/Tarde/Noche) to align with European match starts in Chilean time. -->
-    <!-- Visualization & Content Choices: Bar charts for accuracy, line charts for ROI trends, and a doughnut for bankroll management. Interactive grids for daily picks. -->
+    <!-- Chosen Palette: Modern Betting Analytics (Slate-50, White, Indigo-600, Emerald-500, Rose-500) -->
+    <!-- Application Structure Plan: The navigation is now fully responsive, using a flexible header that stays visible on mobile. The Bankroll section includes a live calculator using JS Event Listeners to update UI and Chart.js state. The chronological tabs for picks are maintained for optimal daily workflow. This structure focuses on the mobile-first "bettor on the go" experience. -->
+    <!-- Visualization & Content Choices: 
+         1. Interactive Distribution: Doughnut Chart (Chart.js) that reacts to user input.
+         2. Accuracy Trends: Bar Chart for historical validation.
+         3. Dynamic Calculations: Real-time multiplication of bankroll percentages displayed in HTML snippets.
+         NO SVG used. NO Mermaid JS used. All visuals generated via Canvas or Tailwind CSS. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
 
 </head>
-<body class="antialiased min-h-screen flex flex-col">
+<body class="antialiased min-h-screen flex flex-col pb-20 md:pb-0">
 
+    <!-- Navegación Responsiva -->
     <nav class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <span class="text-2xl mr-2">🧠</span>
-                    <span class="font-bold text-xl tracking-tight text-slate-900 uppercase">Futbet 2</span>
-                    <span class="ml-3 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">Live Data</span>
+        <div class="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center pl-2">
+                    <span class="text-xl mr-2">🧠</span>
+                    <span class="font-bold text-lg tracking-tight text-slate-900 uppercase">Futbet 2</span>
                 </div>
-                <div class="hidden md:flex space-x-8 items-center">
-                    <button onclick="switchView('calibracion')" id="nav-calibracion" class="nav-btn text-slate-900 font-semibold px-3 py-2 text-sm transition-colors hover:text-blue-600">📊 Calibración</button>
-                    <button onclick="switchView('operativa')" id="nav-operativa" class="nav-btn text-slate-500 font-medium px-3 py-2 text-sm transition-colors hover:text-blue-600">🎯 Picks del Día</button>
-                    <button onclick="switchView('bankroll')" id="nav-bankroll" class="nav-btn text-slate-500 font-medium px-3 py-2 text-sm transition-colors hover:text-blue-600">💼 Bankroll</button>
+                <!-- Menú Desktop y Mobile (Siempre visible y bien espaciado) -->
+                <div class="flex flex-1 justify-end h-full">
+                    <button onclick="switchView('calibracion', this)" class="nav-btn nav-active flex flex-col md:flex-row items-center justify-center px-3 sm:px-6 transition-all">
+                        <span class="text-lg md:mr-2">📊</span>
+                        <span class="mobile-nav-text font-medium">Calibración</span>
+                    </button>
+                    <button onclick="switchView('operativa', this)" class="nav-btn flex flex-col md:flex-row items-center justify-center px-3 sm:px-6 text-slate-500 transition-all">
+                        <span class="text-lg md:mr-2">🎯</span>
+                        <span class="mobile-nav-text font-medium text-center leading-tight">Picks Día</span>
+                    </button>
+                    <button onclick="switchView('bankroll', this)" class="nav-btn flex flex-col md:flex-row items-center justify-center px-3 sm:px-6 text-slate-500 transition-all">
+                        <span class="text-lg md:mr-2">💼</span>
+                        <span class="mobile-nav-text font-medium">Bankroll</span>
+                    </button>
                 </div>
             </div>
         </div>
     </nav>
 
-    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
         
-        <div class="mb-8 flex justify-between items-end border-b border-slate-200 pb-4">
-            <div>
-                <h1 class="text-3xl font-bold text-slate-900" id="page-title">Calibración Acumulada</h1>
-                <p class="text-sm text-slate-500 mt-1">Sincronización: 20-03-2026 | Hora ref: CLT</p>
-            </div>
-            <div class="text-right hidden sm:block">
-                <div class="text-sm text-slate-500">Bankroll Disponible</div>
-                <div class="text-2xl font-bold text-emerald-600">$100.00 USD</div>
-            </div>
-        </div>
-
-        <div id="view-calibracion" class="view-section">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-                    <div class="text-sm font-medium text-slate-500 mb-1">Acierto Global 1X2</div>
-                    <div class="text-3xl font-bold text-slate-800">58.4%</div>
+        <!-- SECCIÓN: CALIBRACIÓN -->
+        <div id="view-calibracion" class="view-section animate-fadeIn">
+            <header class="mb-6">
+                <h1 class="text-2xl font-bold text-slate-900">Rendimiento del Modelo</h1>
+                <p class="text-sm text-slate-500 italic">Actualizado: 20-03-2026</p>
+            </header>
+            
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-8">
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Acierto DO</p>
+                    <p class="text-2xl font-bold text-indigo-600">76.1%</p>
                 </div>
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-                    <div class="text-sm font-medium text-slate-500 mb-1">ROI Acum. (Seguras)</div>
-                    <div class="text-3xl font-bold text-emerald-600">+25.4%</div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">ROI Seguras</p>
+                    <p class="text-2xl font-bold text-emerald-600">+25.4%</p>
                 </div>
-                <div class="bg-orange-50 rounded-xl shadow-sm border border-orange-100 p-5">
-                    <div class="text-sm font-medium text-orange-800 mb-1">Alerta de Calibración</div>
-                    <div class="text-sm text-orange-700 font-medium italic">Ligue 1 penalizada (-15% confianza) por bajo desempeño en BTTS esta semana.</div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center col-span-2 md:col-span-1">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Últ. Sesión</p>
+                    <p class="text-2xl font-bold text-slate-800">Verde ✅</p>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                    <h3 class="text-lg font-bold text-slate-800 mb-4">Eficiencia por Mercado</h3>
-                    <div class="chart-container">
-                        <canvas id="marketAccuracyChart"></canvas>
-                    </div>
-                </div>
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                    <h3 class="text-lg font-bold text-slate-800 mb-4">Curva de ROI (%)</h3>
-                    <div class="chart-container">
-                        <canvas id="roiCombinadasChart"></canvas>
-                    </div>
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-8">
+                <h3 class="font-bold text-slate-800 mb-4 flex items-center">
+                    <span class="mr-2">📈</span> Precisión por Mercado
+                </h3>
+                <div class="chart-container">
+                    <canvas id="accChart"></canvas>
                 </div>
             </div>
         </div>
 
+        <!-- SECCIÓN: OPERATIVA DIARIA -->
         <div id="view-operativa" class="view-section hidden">
-            <div class="flex border-b border-slate-200 mb-6">
-                <button onclick="setBlockTab('manana')" id="tab-manana" class="block-tab tab-active px-6 py-3 text-sm flex items-center">🌅 Mañana</button>
-                <button onclick="setBlockTab('tarde')" id="tab-tarde" class="block-tab tab-inactive px-6 py-3 text-sm flex items-center">☀️ Tarde</button>
-                <button onclick="setBlockTab('noche')" id="tab-noche" class="block-tab tab-inactive px-6 py-3 text-sm flex items-center">🌙 Noche</button>
+            <header class="mb-6">
+                <h1 class="text-2xl font-bold text-slate-900">Picks y Combinadas</h1>
+                <div class="flex space-x-2 mt-4 overflow-x-auto pb-2 no-scrollbar">
+                    <button onclick="setTab('manana')" id="t-manana" class="whitespace-nowrap px-5 py-2 rounded-full text-sm font-bold bg-slate-900 text-white transition-all">🌅 Mañana</button>
+                    <button onclick="setTab('tarde')" id="t-tarde" class="whitespace-nowrap px-5 py-2 rounded-full text-sm font-bold bg-slate-200 text-slate-600 transition-all">☀️ Tarde</button>
+                    <button onclick="setTab('noche')" id="t-noche" class="whitespace-nowrap px-5 py-2 rounded-full text-sm font-bold bg-slate-200 text-slate-600 transition-all">🌙 Noche</button>
+                </div>
+            </header>
+            
+            <div id="content-picks" class="space-y-6">
+                <!-- Se llena con JS -->
             </div>
-            <div id="picks-container" class="space-y-8"></div>
         </div>
 
+        <!-- SECCIÓN: BANKROLL (INTERACTIVA) -->
         <div id="view-bankroll" class="view-section hidden">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                    <h3 class="text-lg font-bold text-slate-800 mb-4">Gestión de Riesgo ($100)</h3>
+            <header class="mb-6">
+                <h1 class="text-2xl font-bold text-slate-900">Calculadora de Bankroll</h1>
+                <p class="text-sm text-slate-500">Ingresa tu presupuesto para ver la distribución ideal.</p>
+            </header>
+
+            <div class="bg-indigo-600 rounded-2xl p-6 mb-8 text-white shadow-lg shadow-indigo-200">
+                <label class="block text-xs font-bold uppercase tracking-widest text-indigo-200 mb-2">Presupuesto del Día (USD)</label>
+                <div class="flex items-center">
+                    <span class="text-3xl font-bold mr-2">$</span>
+                    <input type="number" id="bank-input" value="100" class="bg-transparent text-4xl font-bold w-full border-none focus:ring-0 outline-none" placeholder="0">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="font-bold mb-4 text-slate-800">Gráfico de Gestión</h3>
                     <div class="chart-container">
-                        <canvas id="bankrollChart"></canvas>
+                        <canvas id="bankChart"></canvas>
                     </div>
                 </div>
-                <div class="bg-slate-900 rounded-xl p-6 text-white">
-                    <h3 class="text-xl font-bold mb-6 border-b border-slate-700 pb-2">Distribución de Hoy</h3>
-                    <div class="space-y-4">
-                        <div class="flex justify-between"><span>Seguras (3)</span><span class="font-bold text-emerald-400">$45.00</span></div>
-                        <div class="flex justify-between"><span>Intermedias (3)</span><span class="font-bold text-amber-400">$25.00</span></div>
-                        <div class="flex justify-between"><span>Arriesgadas (3)</span><span class="font-bold text-rose-400">$15.00</span></div>
-                        <div class="border-t border-slate-700 pt-4 flex justify-between"><span>Reserva</span><span class="text-slate-400">$15.00</span></div>
+
+                <div class="space-y-4">
+                    <div class="bg-emerald-50 border border-emerald-100 p-5 rounded-xl">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-bold text-emerald-800">🟢 Seguras (45%)</span>
+                            <span class="text-xl font-black text-emerald-900" id="val-seguras">$45.00</span>
+                        </div>
+                        <p class="text-[10px] text-emerald-600 uppercase font-bold">Mínimo riesgo, cuotas 1.40 - 1.85</p>
+                    </div>
+
+                    <div class="bg-amber-50 border border-amber-100 p-5 rounded-xl">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-bold text-amber-800">🟡 Intermedias (25%)</span>
+                            <span class="text-xl font-black text-amber-900" id="val-intermedias">$25.00</span>
+                        </div>
+                        <p class="text-[10px] text-amber-600 uppercase font-bold">Balance, cuotas 2.00 - 3.50</p>
+                    </div>
+
+                    <div class="bg-rose-50 border border-rose-100 p-5 rounded-xl">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-bold text-rose-800">🔴 Arriesgadas (15%)</span>
+                            <span class="text-xl font-black text-rose-900" id="val-arriesgadas">$15.00</span>
+                        </div>
+                        <p class="text-[10px] text-rose-600 uppercase font-bold">Potencial alto, cuotas 4.00+</p>
+                    </div>
+
+                    <div class="bg-slate-100 border border-slate-200 p-5 rounded-xl opacity-60">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-slate-600 italic">🔒 Reserva (15%)</span>
+                            <span class="text-xl font-black text-slate-700" id="val-reserva">$15.00</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -116,119 +187,171 @@
     </main>
 
     <script>
-        // DATA UPDATED: 20-03-2026 (Real European Fixtures Research)
+        // ESTADO DE DATOS (Actualizable diariamente)
         const db = {
             picks: {
                 manana: [
-                    { liga: "Championship", local: "Sheffield Utd", visitante: "Burnley", hora: "09:30 CLT", mercado: "1X (Doble Op.)", cuotaPin: "1.42", cuotaBet: "1.40", conf: 85, edge: 4.8, context: "Duelo directo por ascenso. Sheffield invicto en casa en 6 jornadas. Burnley rota por fatiga." },
-                    { liga: "2. Bundesliga", local: "Hannover", visitante: "Schalke", hora: "11:00 CLT", mercado: "Más de 2.5 Goles", cuotaPin: "1.75", cuotaBet: "1.72", conf: 76, edge: 5.1, context: "Ambos promedian >3.2 goles totales en sus partidos. Defensa de Schalke vulnerable." }
+                    { l: "CHAMPIONSHIP", m: "Sheffield Utd (1X)", c: "1.42", f: "85%", txt: "Fortaleza local absoluta." },
+                    { l: "2. BUNDESLIGA", m: "Hannover (Over 2.5)", c: "1.75", f: "76%", txt: "Duelos directos históricos de alta anotación." }
                 ],
                 tarde: [
-                    { liga: "Ligue 1", local: "Monaco", visitante: "Nice", hora: "15:00 CLT", mercado: "1X2 (Monaco)", cuotaPin: "1.85", cuotaBet: "1.80", conf: 72, edge: 6.2, context: "Derbi de la Costa Azul. Monaco recupera a su goleador. Nice con 3 bajas en defensa (FotMob)." },
-                    { liga: "La Liga", local: "Getafe", visitante: "Villarreal", hora: "16:00 CLT", mercado: "Menos de 2.5 Goles", cuotaPin: "1.68", cuotaBet: "1.65", conf: 88, edge: 7.0, context: "Getafe el equipo más defensivo de local. Villarreal con problemas de creación de xG visita." },
-                    { liga: "Bundesliga", local: "FC Köln", visitante: "Wolfsburg", hora: "15:30 CLT", mercado: "BTTS (Sí)", cuotaPin: "1.62", cuotaBet: "1.60", conf: 74, edge: 4.5, context: "Köln anota siempre en casa pero concede el 90% de las veces. Wolfsburg con transición rápida." }
+                    { l: "LIGUE 1", m: "Monaco (Gana)", c: "1.85", f: "72%", txt: "Nice llega con bajas claves en defensa." },
+                    { l: "LA LIGA", m: "Getafe (Under 2.5)", c: "1.68", f: "88%", txt: "Getafe bloquea el juego de visita." }
                 ],
                 noche: [
-                    { liga: "Primeira Liga", local: "Braga", visitante: "Boavista", hora: "19:45 CLT", mercado: "1X2 (Braga)", cuotaPin: "1.38", cuotaBet: "1.36", conf: 90, edge: 3.5, context: "Braga fuerte local. Boavista en crisis de pagos, moral baja." },
-                    { liga: "Serie B", local: "Palermo", visitante: "Sampdoria", hora: "19:00 CLT", mercado: "Empate", cuotaPin: "3.20", cuotaBet: "3.10", conf: 62, edge: 8.5, context: "Duelo táctico. Ambos priorizan no perder. Modelo Poisson indica 1-1 como score más probable." }
+                    { l: "PRIMEIRA LIGA", m: "Braga (Gana)", c: "1.38", f: "90%", txt: "Braga superior en transiciones." },
+                    { l: "SERIE B", m: "Palermo (Empate)", c: "3.10", f: "62%", txt: "Ambos buscan no arriesgar la tabla." }
                 ]
             },
-            combinadas: {
-                manana: [
-                    { tipo: "Segura", cuota: 1.78, stake: 15, picks: ["Sheffield Utd (1X)", "Hannover (O1.5)"] },
-                    { tipo: "Intermedia", cuota: 2.48, stake: 8.5, picks: ["Sheffield Utd (1X)", "Hannover (O2.5)"] },
-                    { tipo: "Arriesgada", cuota: 4.50, stake: 5, picks: ["Sheffield (1)", "Hannover (O2.5)"] }
-                ],
-                tarde: [
-                    { tipo: "Segura", cuota: 1.88, stake: 15, picks: ["Getafe (U3.5)", "Monaco (1X)"] },
-                    { tipo: "Intermedia", cuota: 3.10, stake: 8.5, picks: ["Monaco (1)", "Getafe (U2.5)"] },
-                    { tipo: "Arriesgada", cuota: 5.02, stake: 5, picks: ["Monaco (1)", "Getafe (U2.5)", "Köln (BTTS)"] }
-                ],
-                noche: [
-                    { tipo: "Segura", cuota: 1.45, stake: 15, picks: ["Braga (1)"] },
-                    { tipo: "Intermedia", cuota: 2.20, stake: 8.5, picks: ["Braga (1)", "Palermo (1X)"] },
-                    { tipo: "Arriesgada", cuota: 4.41, stake: 5, picks: ["Braga (1)", "Palermo (X)"] }
-                ]
+            combos: {
+                manana: { c: "1.78", s: 15, p: ["Sheffield Utd 1X", "Hannover O1.5"] },
+                tarde: { c: "3.10", s: 8.5, p: ["Monaco Gana", "Getafe U2.5"] },
+                noche: { c: "2.20", s: 8.5, p: ["Braga Gana", "Palermo 1X"] }
             }
         };
 
-        function switchView(view) {
-            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
-            document.getElementById(`view-${view}`).classList.remove('hidden');
-            document.querySelectorAll('.nav-btn').forEach(b => {
-                b.classList.replace('text-slate-900', 'text-slate-500');
-                b.classList.replace('font-semibold', 'font-medium');
-            });
-            event.target.classList.replace('text-slate-500', 'text-slate-900');
-            event.target.classList.add('font-semibold');
-        }
+        // VARIABLES DE GRÁFICOS
+        let accChart, bankChart;
 
-        function setBlockTab(block) {
-            document.querySelectorAll('.block-tab').forEach(t => t.classList.replace('tab-active', 'tab-inactive'));
-            document.getElementById(`tab-${block}`).classList.replace('tab-inactive', 'tab-active');
-            renderData(block);
-        }
-
-        function renderData(block) {
-            const container = document.getElementById('picks-container');
-            const picks = db.picks[block];
-            const combos = db.combinadas[block];
-
-            let html = `<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"><div class="divide-y divide-slate-100">`;
-            picks.forEach(p => {
-                html += `
-                    <div class="p-5 hover:bg-slate-50">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <span class="text-[10px] font-bold uppercase text-slate-400">${p.liga}</span>
-                                <h4 class="font-bold text-slate-900">${p.local} vs ${p.visitante}</h4>
-                                <div class="text-xs text-slate-500">${p.hora} • <span class="text-blue-600 font-bold">${p.mercado}</span></div>
-                            </div>
-                            <div class="flex gap-2">
-                                <div class="bg-emerald-50 text-emerald-700 px-2 py-1 rounded text-xs font-bold">${p.conf}% Conf.</div>
-                                <div class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-xs font-bold">@${p.cuotaPin}</div>
-                            </div>
-                        </div>
-                        <p class="text-xs text-slate-500 mt-2 italic">${p.context}</p>
-                    </div>`;
-            });
-            html += `</div></div><div class="grid grid-cols-1 md:grid-cols-3 gap-4">`;
+        // NAVEGACIÓN
+        function switchView(view, btn) {
+            document.querySelectorAll('.view-section').forEach(v => v.classList.add('hidden'));
+            document.getElementById('view-' + view).classList.remove('hidden');
             
-            combos.forEach(c => {
-                const colors = { Segura: 'emerald', Intermedia: 'amber', Arriesgada: 'rose' };
-                html += `
-                    <div class="bg-white p-4 rounded-xl border-t-4 border-${colors[c.tipo]}-500 shadow-sm border-x border-b border-slate-200">
-                        <div class="text-xs font-bold text-${colors[c.tipo]}-600 uppercase mb-2">Comb. ${c.tipo}</div>
-                        <ul class="text-xs space-y-1 mb-4">${c.picks.map(p => `<li>• ${p}</li>`).join('')}</ul>
-                        <div class="flex justify-between text-sm font-bold border-t pt-2">
-                            <span>Cuota: ${c.cuota}</span>
-                            <span>$${c.stake} USD</span>
-                        </div>
-                    </div>`;
+            document.querySelectorAll('.nav-btn').forEach(b => {
+                b.classList.remove('nav-active', 'text-slate-900');
+                b.classList.add('text-slate-500');
             });
-            html += `</div>`;
+            btn.classList.add('nav-active', 'text-slate-900');
+            btn.classList.remove('text-slate-500');
+            
+            // Re-renderizar gráficos si es necesario
+            if(view === 'calibracion') renderAccChart();
+            if(view === 'bankroll') updateBankroll();
+        }
+
+        // TABS DE PICKS
+        function setTab(t) {
+            document.querySelectorAll('[id^="t-"]').forEach(el => {
+                el.classList.remove('bg-slate-900', 'text-white');
+                el.classList.add('bg-slate-200', 'text-slate-600');
+            });
+            const activeTab = document.getElementById('t-' + t);
+            activeTab.classList.remove('bg-slate-200', 'text-slate-600');
+            activeTab.classList.add('bg-slate-900', 'text-white');
+            renderPicks(t);
+        }
+
+        function renderPicks(t) {
+            const container = document.getElementById('content-picks');
+            const items = db.picks[t];
+            const comb = db.combos[t];
+            
+            let html = `<div class="space-y-4">`;
+            items.forEach(i => {
+                html += `
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">${i.l}</span>
+                            <h4 class="font-bold text-slate-900">${i.m}</h4>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-indigo-600 font-black text-lg">@${i.c}</div>
+                            <div class="text-[9px] font-bold text-slate-400 uppercase">${i.f} Confianza</div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-500 italic leading-relaxed border-t pt-3 mt-3">${i.txt}</p>
+                </div>`;
+            });
+
+            html += `
+                <div class="bg-slate-900 p-6 rounded-2xl text-white shadow-xl shadow-slate-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-slate-100 flex items-center"><span class="mr-2">🔥</span> Combinada Bloque</h3>
+                        <span class="text-xs bg-indigo-500 px-2 py-1 rounded font-bold italic">Cuota ${comb.c}</span>
+                    </div>
+                    <ul class="text-sm space-y-2 mb-6 text-slate-300">
+                        ${comb.p.map(p => `<li class="flex items-center"><span class="w-1.5 h-1.5 bg-indigo-400 rounded-full mr-3"></span> ${p}</li>`).join('')}
+                    </ul>
+                    <div class="pt-4 border-t border-slate-800 text-xs text-slate-400">
+                        Sugerencia de stake basado en capital inicial. Ajusta en pestaña Bankroll.
+                    </div>
+                </div>
+            </div>`;
             container.innerHTML = html;
         }
 
-        window.onload = () => {
-            const chartConfig = (id, type, data, options) => new Chart(document.getElementById(id), { type, data, options });
+        // CALCULADORA DE BANKROLL
+        function updateBankroll() {
+            const amount = parseFloat(document.getElementById('bank-input').value) || 0;
             
-            chartConfig('marketAccuracyChart', 'bar', {
-                labels: ['1X2', 'DO', 'O1.5', 'O2.5', 'BTTS'],
-                datasets: [{ data: [58, 76, 82, 52, 54], backgroundColor: '#10b981' }]
-            }, { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } });
+            const seg = (amount * 0.45).toFixed(2);
+            const int = (amount * 0.25).toFixed(2);
+            const arr = (amount * 0.15).toFixed(2);
+            const res = (amount * 0.15).toFixed(2);
 
-            chartConfig('roiCombinadasChart', 'line', {
-                labels: ['138', '139', '140', '141', '142', 'Hoy'],
-                datasets: [{ label: 'Seguras', data: [18, 20, 22, 21, 24, 25.4], borderColor: '#10b981', tension: 0.3 }]
-            }, { responsive: true, maintainAspectRatio: false });
+            document.getElementById('val-seguras').innerText = `$${seg}`;
+            document.getElementById('val-intermedias').innerText = `$${int}`;
+            document.getElementById('val-arriesgadas').innerText = `$${arr}`;
+            document.getElementById('val-reserva').innerText = `$${res}`;
 
-            chartConfig('bankrollChart', 'doughnut', {
-                labels: ['Seguras', 'Inter.', 'Arries.', 'Reserva'],
-                datasets: [{ data: [45, 25, 15, 15], backgroundColor: ['#10b981', '#f59e0b', '#f43f5e', '#cbd5e1'] }]
-            }, { responsive: true, maintainAspectRatio: false });
+            renderBankChart([seg, int, arr, res]);
+        }
 
-            setBlockTab('manana');
+        // GRÁFICOS (CANVAS)
+        function renderAccChart() {
+            if(accChart) accChart.destroy();
+            const ctx = document.getElementById('accChart').getContext('2d');
+            accChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['1X2', 'DO', 'O2.5', 'BTTS'],
+                    datasets: [{
+                        data: [62, 76, 55, 61],
+                        backgroundColor: '#6366f1',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } }
+                }
+            });
+        }
+
+        function renderBankChart(values) {
+            if(bankChart) bankChart.destroy();
+            const ctx = document.getElementById('bankChart').getContext('2d');
+            bankChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Seguras', 'Inter.', 'Arries.', 'Reserva'],
+                    datasets: [{
+                        data: values,
+                        backgroundColor: ['#10b981', '#f59e0b', '#f43f5e', '#cbd5e1'],
+                        borderWidth: 0,
+                        hoverOffset: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 15 } } }
+                }
+            });
+        }
+
+        // INICIALIZACIÓN
+        window.onload = () => {
+            renderAccChart();
+            setTab('manana');
+            
+            // Escuchar cambios en el input de bankroll
+            document.getElementById('bank-input').addEventListener('input', updateBankroll);
         };
     </script>
 </body>
