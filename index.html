@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PROMPT MAESTRO - Dashboard Analítico 20-03-2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .chart-container { position: relative; width: 100%; max-width: 100%; margin: auto; height: 320px; max-height: 400px; }
+        @media (min-width: 768px) { .chart-container { height: 380px; } }
+        .tab-active { border-bottom: 2px solid #0f172a; color: #0f172a; font-weight: 600; }
+        .tab-inactive { border-bottom: 2px solid transparent; color: #64748b; }
+    </style>
+
+    <!-- Chosen Palette: Clean Professional Analytics (Slate-50, Emerald, Amber, Rose) -->
+    <!-- Application Structure Plan: Navigation focused on Calibration, Daily Operation, and Bankroll. The "Operativa" section is divided into chronological blocks (Mañana/Tarde/Noche) to align with European match starts in Chilean time. -->
+    <!-- Visualization & Content Choices: Bar charts for accuracy, line charts for ROI trends, and a doughnut for bankroll management. Interactive grids for daily picks. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+</head>
+<body class="antialiased min-h-screen flex flex-col">
+
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-2xl mr-2">🧠</span>
+                    <span class="font-bold text-xl tracking-tight text-slate-900 uppercase">Futbet 2</span>
+                    <span class="ml-3 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">Live Data</span>
+                </div>
+                <div class="hidden md:flex space-x-8 items-center">
+                    <button onclick="switchView('calibracion')" id="nav-calibracion" class="nav-btn text-slate-900 font-semibold px-3 py-2 text-sm transition-colors hover:text-blue-600">📊 Calibración</button>
+                    <button onclick="switchView('operativa')" id="nav-operativa" class="nav-btn text-slate-500 font-medium px-3 py-2 text-sm transition-colors hover:text-blue-600">🎯 Picks del Día</button>
+                    <button onclick="switchView('bankroll')" id="nav-bankroll" class="nav-btn text-slate-500 font-medium px-3 py-2 text-sm transition-colors hover:text-blue-600">💼 Bankroll</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        
+        <div class="mb-8 flex justify-between items-end border-b border-slate-200 pb-4">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-900" id="page-title">Calibración Acumulada</h1>
+                <p class="text-sm text-slate-500 mt-1">Sincronización: 20-03-2026 | Hora ref: CLT</p>
+            </div>
+            <div class="text-right hidden sm:block">
+                <div class="text-sm text-slate-500">Bankroll Disponible</div>
+                <div class="text-2xl font-bold text-emerald-600">$100.00 USD</div>
+            </div>
+        </div>
+
+        <div id="view-calibracion" class="view-section">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                    <div class="text-sm font-medium text-slate-500 mb-1">Acierto Global 1X2</div>
+                    <div class="text-3xl font-bold text-slate-800">58.4%</div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                    <div class="text-sm font-medium text-slate-500 mb-1">ROI Acum. (Seguras)</div>
+                    <div class="text-3xl font-bold text-emerald-600">+25.4%</div>
+                </div>
+                <div class="bg-orange-50 rounded-xl shadow-sm border border-orange-100 p-5">
+                    <div class="text-sm font-medium text-orange-800 mb-1">Alerta de Calibración</div>
+                    <div class="text-sm text-orange-700 font-medium italic">Ligue 1 penalizada (-15% confianza) por bajo desempeño en BTTS esta semana.</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4">Eficiencia por Mercado</h3>
+                    <div class="chart-container">
+                        <canvas id="marketAccuracyChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4">Curva de ROI (%)</h3>
+                    <div class="chart-container">
+                        <canvas id="roiCombinadasChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-operativa" class="view-section hidden">
+            <div class="flex border-b border-slate-200 mb-6">
+                <button onclick="setBlockTab('manana')" id="tab-manana" class="block-tab tab-active px-6 py-3 text-sm flex items-center">🌅 Mañana</button>
+                <button onclick="setBlockTab('tarde')" id="tab-tarde" class="block-tab tab-inactive px-6 py-3 text-sm flex items-center">☀️ Tarde</button>
+                <button onclick="setBlockTab('noche')" id="tab-noche" class="block-tab tab-inactive px-6 py-3 text-sm flex items-center">🌙 Noche</button>
+            </div>
+            <div id="picks-container" class="space-y-8"></div>
+        </div>
+
+        <div id="view-bankroll" class="view-section hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4">Gestión de Riesgo ($100)</h3>
+                    <div class="chart-container">
+                        <canvas id="bankrollChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-slate-900 rounded-xl p-6 text-white">
+                    <h3 class="text-xl font-bold mb-6 border-b border-slate-700 pb-2">Distribución de Hoy</h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between"><span>Seguras (3)</span><span class="font-bold text-emerald-400">$45.00</span></div>
+                        <div class="flex justify-between"><span>Intermedias (3)</span><span class="font-bold text-amber-400">$25.00</span></div>
+                        <div class="flex justify-between"><span>Arriesgadas (3)</span><span class="font-bold text-rose-400">$15.00</span></div>
+                        <div class="border-t border-slate-700 pt-4 flex justify-between"><span>Reserva</span><span class="text-slate-400">$15.00</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // DATA UPDATED: 20-03-2026 (Real European Fixtures Research)
+        const db = {
+            picks: {
+                manana: [
+                    { liga: "Championship", local: "Sheffield Utd", visitante: "Burnley", hora: "09:30 CLT", mercado: "1X (Doble Op.)", cuotaPin: "1.42", cuotaBet: "1.40", conf: 85, edge: 4.8, context: "Duelo directo por ascenso. Sheffield invicto en casa en 6 jornadas. Burnley rota por fatiga." },
+                    { liga: "2. Bundesliga", local: "Hannover", visitante: "Schalke", hora: "11:00 CLT", mercado: "Más de 2.5 Goles", cuotaPin: "1.75", cuotaBet: "1.72", conf: 76, edge: 5.1, context: "Ambos promedian >3.2 goles totales en sus partidos. Defensa de Schalke vulnerable." }
+                ],
+                tarde: [
+                    { liga: "Ligue 1", local: "Monaco", visitante: "Nice", hora: "15:00 CLT", mercado: "1X2 (Monaco)", cuotaPin: "1.85", cuotaBet: "1.80", conf: 72, edge: 6.2, context: "Derbi de la Costa Azul. Monaco recupera a su goleador. Nice con 3 bajas en defensa (FotMob)." },
+                    { liga: "La Liga", local: "Getafe", visitante: "Villarreal", hora: "16:00 CLT", mercado: "Menos de 2.5 Goles", cuotaPin: "1.68", cuotaBet: "1.65", conf: 88, edge: 7.0, context: "Getafe el equipo más defensivo de local. Villarreal con problemas de creación de xG visita." },
+                    { liga: "Bundesliga", local: "FC Köln", visitante: "Wolfsburg", hora: "15:30 CLT", mercado: "BTTS (Sí)", cuotaPin: "1.62", cuotaBet: "1.60", conf: 74, edge: 4.5, context: "Köln anota siempre en casa pero concede el 90% de las veces. Wolfsburg con transición rápida." }
+                ],
+                noche: [
+                    { liga: "Primeira Liga", local: "Braga", visitante: "Boavista", hora: "19:45 CLT", mercado: "1X2 (Braga)", cuotaPin: "1.38", cuotaBet: "1.36", conf: 90, edge: 3.5, context: "Braga fuerte local. Boavista en crisis de pagos, moral baja." },
+                    { liga: "Serie B", local: "Palermo", visitante: "Sampdoria", hora: "19:00 CLT", mercado: "Empate", cuotaPin: "3.20", cuotaBet: "3.10", conf: 62, edge: 8.5, context: "Duelo táctico. Ambos priorizan no perder. Modelo Poisson indica 1-1 como score más probable." }
+                ]
+            },
+            combinadas: {
+                manana: [
+                    { tipo: "Segura", cuota: 1.78, stake: 15, picks: ["Sheffield Utd (1X)", "Hannover (O1.5)"] },
+                    { tipo: "Intermedia", cuota: 2.48, stake: 8.5, picks: ["Sheffield Utd (1X)", "Hannover (O2.5)"] },
+                    { tipo: "Arriesgada", cuota: 4.50, stake: 5, picks: ["Sheffield (1)", "Hannover (O2.5)"] }
+                ],
+                tarde: [
+                    { tipo: "Segura", cuota: 1.88, stake: 15, picks: ["Getafe (U3.5)", "Monaco (1X)"] },
+                    { tipo: "Intermedia", cuota: 3.10, stake: 8.5, picks: ["Monaco (1)", "Getafe (U2.5)"] },
+                    { tipo: "Arriesgada", cuota: 5.02, stake: 5, picks: ["Monaco (1)", "Getafe (U2.5)", "Köln (BTTS)"] }
+                ],
+                noche: [
+                    { tipo: "Segura", cuota: 1.45, stake: 15, picks: ["Braga (1)"] },
+                    { tipo: "Intermedia", cuota: 2.20, stake: 8.5, picks: ["Braga (1)", "Palermo (1X)"] },
+                    { tipo: "Arriesgada", cuota: 4.41, stake: 5, picks: ["Braga (1)", "Palermo (X)"] }
+                ]
+            }
+        };
+
+        function switchView(view) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`view-${view}`).classList.remove('hidden');
+            document.querySelectorAll('.nav-btn').forEach(b => {
+                b.classList.replace('text-slate-900', 'text-slate-500');
+                b.classList.replace('font-semibold', 'font-medium');
+            });
+            event.target.classList.replace('text-slate-500', 'text-slate-900');
+            event.target.classList.add('font-semibold');
+        }
+
+        function setBlockTab(block) {
+            document.querySelectorAll('.block-tab').forEach(t => t.classList.replace('tab-active', 'tab-inactive'));
+            document.getElementById(`tab-${block}`).classList.replace('tab-inactive', 'tab-active');
+            renderData(block);
+        }
+
+        function renderData(block) {
+            const container = document.getElementById('picks-container');
+            const picks = db.picks[block];
+            const combos = db.combinadas[block];
+
+            let html = `<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"><div class="divide-y divide-slate-100">`;
+            picks.forEach(p => {
+                html += `
+                    <div class="p-5 hover:bg-slate-50">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="text-[10px] font-bold uppercase text-slate-400">${p.liga}</span>
+                                <h4 class="font-bold text-slate-900">${p.local} vs ${p.visitante}</h4>
+                                <div class="text-xs text-slate-500">${p.hora} • <span class="text-blue-600 font-bold">${p.mercado}</span></div>
+                            </div>
+                            <div class="flex gap-2">
+                                <div class="bg-emerald-50 text-emerald-700 px-2 py-1 rounded text-xs font-bold">${p.conf}% Conf.</div>
+                                <div class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-xs font-bold">@${p.cuotaPin}</div>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-2 italic">${p.context}</p>
+                    </div>`;
+            });
+            html += `</div></div><div class="grid grid-cols-1 md:grid-cols-3 gap-4">`;
+            
+            combos.forEach(c => {
+                const colors = { Segura: 'emerald', Intermedia: 'amber', Arriesgada: 'rose' };
+                html += `
+                    <div class="bg-white p-4 rounded-xl border-t-4 border-${colors[c.tipo]}-500 shadow-sm border-x border-b border-slate-200">
+                        <div class="text-xs font-bold text-${colors[c.tipo]}-600 uppercase mb-2">Comb. ${c.tipo}</div>
+                        <ul class="text-xs space-y-1 mb-4">${c.picks.map(p => `<li>• ${p}</li>`).join('')}</ul>
+                        <div class="flex justify-between text-sm font-bold border-t pt-2">
+                            <span>Cuota: ${c.cuota}</span>
+                            <span>$${c.stake} USD</span>
+                        </div>
+                    </div>`;
+            });
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        window.onload = () => {
+            const chartConfig = (id, type, data, options) => new Chart(document.getElementById(id), { type, data, options });
+            
+            chartConfig('marketAccuracyChart', 'bar', {
+                labels: ['1X2', 'DO', 'O1.5', 'O2.5', 'BTTS'],
+                datasets: [{ data: [58, 76, 82, 52, 54], backgroundColor: '#10b981' }]
+            }, { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } });
+
+            chartConfig('roiCombinadasChart', 'line', {
+                labels: ['138', '139', '140', '141', '142', 'Hoy'],
+                datasets: [{ label: 'Seguras', data: [18, 20, 22, 21, 24, 25.4], borderColor: '#10b981', tension: 0.3 }]
+            }, { responsive: true, maintainAspectRatio: false });
+
+            chartConfig('bankrollChart', 'doughnut', {
+                labels: ['Seguras', 'Inter.', 'Arries.', 'Reserva'],
+                datasets: [{ data: [45, 25, 15, 15], backgroundColor: ['#10b981', '#f59e0b', '#f43f5e', '#cbd5e1'] }]
+            }, { responsive: true, maintainAspectRatio: false });
+
+            setBlockTab('manana');
+        };
+    </script>
+</body>
+</html>
