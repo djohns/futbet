@@ -1,108 +1,347 @@
-<!DOCTYPE html><html data-astro-source-file="src/pages/index.astro" data-astro-source-loc="14:0" lang="en" data-astro-cid-j7pv25f6> <head data-astro-source-file="src/pages/index.astro" data-astro-source-loc="15:2"><meta data-astro-source-file="src/pages/index.astro" data-astro-source-loc="16:4" charset="utf-8"><meta data-astro-source-file="src/pages/index.astro" data-astro-source-loc="17:4" name="viewport" content="width=device-width"><link data-astro-source-file="src/pages/index.astro" data-astro-source-loc="18:4" rel="icon" type="image/svg+xml" href="/favicon.svg"><meta data-astro-source-file="src/pages/index.astro" data-astro-source-loc="19:4" name="generator" content="Astro v5.18.1"><title data-astro-source-file="src/pages/index.astro" data-astro-source-loc="20:4">PickStats - Daily Sports Betting Picks</title><meta data-astro-source-file="src/pages/index.astro" data-astro-source-loc="21:4" name="description" content="Get free daily sports betting picks backed by real results. Track our success rate and upgrade to VIP for premium selections."><link data-astro-source-file="src/components/RequiredB12HeadScripts.astro" data-astro-source-loc="7:0" rel="canonical" href="https://betsmart-picks-staging.b12sites.com/"><script>(function(){const clientUid = "YsVmVg7D";
-const productUrl = "https://b12.io";
+import React, { useState, useEffect } from 'react';
+import { 
+  TrendingUp, 
+  CheckCircle, 
+  Calendar, 
+  Lock, 
+  ShieldCheck, 
+  Zap, 
+  Target, 
+  BarChart3, 
+  RefreshCw,
+  Trophy,
+  AlertCircle
+} from 'lucide-react';
 
-  window.__CLIENT_UID__ = clientUid
-  window.__PRODUCT_URL__ = productUrl
-})();</script><script>(function(){const previewFrameScriptUrl = "https://static.b12.io/static/preview_frame_v2/preview_frame_v2.87eef444c438.js";
-const debug = false;
+// ==========================================
+// 📊 CONFIGURACIÓN DE GOOGLE SHEETS
+// ==========================================
+// Para conectar esto a tu Google Sheet real:
+// 1. Ve a tu Google Sheet -> Archivo -> Compartir -> Publicar en la web.
+// 2. Selecciona "Todo el documento" o la hoja específica y elige "Valores separados por comas (.csv)".
+// 3. Pega ese enlace aquí abajo.
+const GOOGLE_SHEETS_CSV_URL = ""; 
 
-  ;(function () {
-    if (window.self === window.top) {
-      if (debug) {
-        console.log('Site Builder: is not an iframe. Exit.')
+// ==========================================
+// 🗄️ DATOS DE PRUEBA (MOCK DATA)
+// ==========================================
+// Estos datos simulan lo que vendría de tu Google Sheet.
+// Incluye tu estrategia de 2 Rondas y 3 Categorías de Riesgo.
+const MOCK_DATA = {
+  date: "25 de Marzo, 2026",
+  picks: {
+    ronda1: [
+      { id: 1, match: "PSV vs Ajax", league: "Eredivisie", prediction: "+1.5 Goles Totales", category: "High Value", prob: "88%", odds: "1.25" },
+      { id: 2, match: "Al Nassr vs Al Hilal", league: "Saudi Pro League", prediction: "Ambos Anotan (Sí)", category: "Intermedia", prob: "72%", odds: "1.65" },
+      { id: 3, match: "Feyenoord vs AZ", league: "Eredivisie", prediction: "Local + Gol en HT", category: "High Factor", prob: "55%", odds: "2.30" },
+    ],
+    ronda2: [
+      { id: 4, match: "Arsenal vs Chelsea", league: "Premier League", prediction: "1X (Doble Oportunidad)", category: "High Value", prob: "82%", odds: "1.30" },
+      { id: 5, match: "Bayern Munich vs B. Dortmund", league: "Bundesliga", prediction: "+7.5 Córners", category: "Intermedia", prob: "75%", odds: "1.55" },
+      { id: 6, match: "Real Madrid vs Barcelona", league: "La Liga", prediction: "+2.5 Tarjetas + Ambos Anotan", category: "High Factor", prob: "48%", odds: "2.85" },
+    ]
+  },
+  stats: {
+    yesterdaySummary: "Ayer cerramos con un balance muy positivo: 4/6 aciertos en la Tabla General. ¡La estrategia High Value volvió a ser un éxito rotundo con 2/2 verdes!",
+    monthly: {
+      highValue: 85,
+      intermedia: 68,
+      highFactor: 42
+    },
+    totalProfitUnits: "+14.5"
+  }
+};
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('home');
+  const [data, setData] = useState(MOCK_DATA);
+  const [loading, setLoading] = useState(false);
+
+  // Función para simular la carga desde Google Sheets
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      if (GOOGLE_SHEETS_CSV_URL) {
+        // Lógica real para procesar el CSV
+        // const response = await fetch(GOOGLE_SHEETS_CSV_URL);
+        // const csvText = await response.text();
+        // Aquí iría una función para convertir el texto CSV a un objeto JSON (ej. usando PapaParse o split('\n'))
+        console.log("Cargando desde Google Sheets...");
+      } else {
+        // Usamos los datos de prueba si no hay URL
+        setTimeout(() => {
+          setData(MOCK_DATA);
+          setLoading(false);
+        }, 800);
       }
-      return
+    } catch (error) {
+      console.error("Error cargando datos:", error);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // Componente de Tarjeta para Pronósticos
+  const PickCard = ({ pick }) => {
+    // Asignar colores e íconos según tu categoría de riesgo
+    let catColors = "";
+    let Icon = ShieldCheck;
+
+    if (pick.category === "High Value") {
+      catColors = "bg-emerald-500/10 border-emerald-500/30 text-emerald-400";
+      Icon = ShieldCheck;
+    } else if (pick.category === "Intermedia") {
+      catColors = "bg-blue-500/10 border-blue-500/30 text-blue-400";
+      Icon = Target;
+    } else if (pick.category === "High Factor") {
+      catColors = "bg-amber-500/10 border-amber-500/30 text-amber-400";
+      Icon = Zap;
     }
 
-    if (window.__B12_PREVIEW_FRAME_LOADED__) {
-      if (debug) {
-        console.log('Site Builder: preview script already loaded. Skip.')
-      }
-      return
-    }
-    window.__B12_PREVIEW_FRAME_LOADED__ = true
+    return (
+      <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all hover:bg-slate-750">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">{pick.league}</span>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full border flex items-center gap-1 ${catColors}`}>
+              <Icon size={10} />
+              {pick.category}
+            </span>
+          </div>
+          <h3 className="font-bold text-lg text-white">{pick.match}</h3>
+          <p className="text-slate-300 font-medium mt-1">Pick: {pick.prediction}</p>
+        </div>
+        
+        <div className="flex flex-row md:flex-col gap-4 md:gap-1 items-center md:items-end w-full md:w-auto bg-slate-900 md:bg-transparent p-3 md:p-0 rounded-lg">
+          <div className="text-center md:text-right flex-1 md:flex-none">
+            <p className="text-xs text-slate-400">Probabilidad</p>
+            <p className="text-lg font-bold text-white">{pick.prob}</p>
+          </div>
+          <div className="w-px h-8 bg-slate-700 md:hidden block"></div>
+          <div className="text-center md:text-right flex-1 md:flex-none">
+            <p className="text-xs text-slate-400">Cuota</p>
+            <p className="text-lg font-bold text-emerald-400">{pick.odds}</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
-    const script = document.createElement('script')
-    script.src = previewFrameScriptUrl
-    script.async = true
-    script.defer = true
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-emerald-500/30">
+      
+      {/* HEADER / NAVEGACIÓN */}
+      <nav className="border-b border-slate-800 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveTab('home')}>
+            <TrendingUp className="text-emerald-500" size={28} />
+            <span className="text-xl font-black tracking-tight text-white">Pick<span className="text-emerald-500">Stats</span></span>
+          </div>
+          <div className="flex gap-1 sm:gap-4">
+            <button 
+              onClick={() => setActiveTab('picks')}
+              className={`px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'picks' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}
+            >
+              Tabla de Hoy
+            </button>
+            <button 
+              onClick={() => setActiveTab('results')}
+              className={`px-3 py-2 text-sm font-semibold rounded-lg transition-colors flex items-center gap-1 ${activeTab === 'results' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}
+            >
+              <Lock size={14} className="hidden sm:block" /> Resultados VIP
+            </button>
+          </div>
+        </div>
+      </nav>
 
-    script.onerror = function () {
-      console.error('Site Builder: Failed to load editor bridge.')
-    }
+      <main className="max-w-6xl mx-auto px-4 py-8">
+        
+        {/* ==========================================
+            VISTA: INICIO (HOME)
+        ========================================== */}
+        {activeTab === 'home' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="text-center max-w-3xl mx-auto py-12 sm:py-20">
+              <h1 className="text-4xl sm:text-6xl font-black text-white leading-tight mb-6">
+                Pronósticos Deportivos <br/>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-blue-500">Basados en Datos</span>
+              </h1>
+              <p className="text-lg text-slate-400 mb-8 max-w-2xl mx-auto">
+                Estrategias divididas por riesgo: High Value, Intermedia y High Factor. Análisis diario de la Premier League, La Liga, Eredivisie, Saudi Pro League y más.
+              </p>
+              <div className="flex flex-col sm:flex-row justify-center gap-4">
+                <button 
+                  onClick={() => setActiveTab('picks')}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-8 py-3 rounded-xl transition-all shadow-lg shadow-emerald-500/20"
+                >
+                  Ver Tabla de Hoy
+                </button>
+                <button 
+                  onClick={() => setActiveTab('results')}
+                  className="bg-slate-800 hover:bg-slate-700 text-white font-bold px-8 py-3 rounded-xl transition-all border border-slate-700 flex items-center justify-center gap-2"
+                >
+                  <BarChart3 size={18} /> Estadísticas VIP
+                </button>
+              </div>
+            </div>
 
-    if (debug) {
-      console.log('Site Builder: append the preview script:', script.src)
-    }
-    document.head.appendChild(script)
-  })()
-})();</script><link rel="stylesheet" href="/_astro/about.CL2VCdjL.css">
-<style>@keyframes fadeUp{0%{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}.animate-fade-up[data-astro-cid-j7pv25f6]{animation:fadeUp .6s ease-out forwards}
-</style></head> <body data-astro-source-file="src/pages/index.astro" data-astro-source-loc="25:2" data-astro-cid-j7pv25f6> <header data-astro-source-file="src/components/Header.astro" data-astro-source-loc="9:0" class="sticky top-0 z-50 bg-primary border-b border-border" data-astro-cid-3ef6ksr2> <nav data-astro-source-file="src/components/Header.astro" data-astro-source-loc="10:2" class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between" data-astro-cid-3ef6ksr2>  <a data-astro-source-file="src/components/Header.astro" data-astro-source-loc="12:4" href="/" class="flex items-center gap-2" data-astro-cid-3ef6ksr2> <span data-astro-source-file="src/components/Header.astro" data-astro-source-loc="13:6" class="text-2xl font-bold text-accent font-rajdhani tracking-wider" data-astro-cid-3ef6ksr2>PICK</span> <span data-astro-source-file="src/components/Header.astro" data-astro-source-loc="14:6" class="text-2xl font-bold text-foreground font-rajdhani tracking-wider" data-astro-cid-3ef6ksr2>STATS</span> </a>  <div data-astro-source-file="src/components/Header.astro" data-astro-source-loc="18:4" class="hidden md:flex items-center gap-8" data-astro-cid-3ef6ksr2> <a data-astro-source-file="src/components/Header.astro" data-astro-source-loc="19:6" href="/index#free-picks" class="text-sm uppercase font-medium transition-colors text-foreground hover:text-accent" data-astro-cid-3ef6ksr2>
-Free Picks
-</a> <a data-astro-source-file="src/components/Header.astro" data-astro-source-loc="29:6" href="/index#vip" class="text-sm uppercase font-medium transition-colors text-foreground hover:text-accent" data-astro-cid-3ef6ksr2>
-VIP
-</a> <a data-astro-source-file="src/components/Header.astro" data-astro-source-loc="39:6" href="/results" class="text-sm uppercase font-medium transition-colors text-foreground hover:text-accent" data-astro-cid-3ef6ksr2>
-Results
-</a> <a data-astro-source-file="src/components/Header.astro" data-astro-source-loc="49:6" href="/about" class="text-sm uppercase font-medium transition-colors text-foreground hover:text-accent" data-astro-cid-3ef6ksr2>
-About
-</a> </div>  <div data-astro-source-file="src/components/Header.astro" data-astro-source-loc="62:4" class="hidden md:flex items-center gap-4" data-astro-cid-3ef6ksr2> <a data-astro-source-file="src/components/Header.astro" data-astro-source-loc="63:6" href="#login" class="text-sm uppercase font-medium text-foreground hover:text-accent transition-colors" data-astro-cid-3ef6ksr2>
-Login
-</a> <a data-astro-source-file="src/components/Header.astro" data-astro-source-loc="69:6" href="#signup" class="bg-accent text-accent-foreground px-4 py-2 rounded font-bold text-sm uppercase hover:opacity-90 transition-opacity" data-astro-cid-3ef6ksr2>
-Sign Up
-</a> </div>  <button data-astro-source-file="src/components/Header.astro" data-astro-source-loc="78:4" class="md:hidden text-accent text-2xl" data-astro-cid-3ef6ksr2>☰</button> </nav> </header>  <main data-astro-source-file="src/pages/index.astro" data-astro-source-loc="28:4" data-astro-cid-j7pv25f6>  <section data-astro-source-file="src/pages/index.astro" data-astro-source-loc="30:6" id="hero" class="relative bg-gradient-to-b from-primary to-primary/80 py-20 px-4 overflow-hidden" data-astro-cid-j7pv25f6> <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="31:8" class="max-w-7xl mx-auto" data-astro-cid-j7pv25f6> <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="32:10" class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center" data-astro-cid-j7pv25f6>  <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="34:12" class="space-y-6 animate-fade-up" data-astro-cid-j7pv25f6> <h1 data-astro-source-file="src/pages/index.astro" data-astro-source-loc="35:14" class="text-5xl lg:text-6xl font-bold leading-tight" data-astro-cid-j7pv25f6>
-Daily Sports Betting Picks, <span data-astro-source-file="src/pages/index.astro" data-astro-source-loc="36:44" class="text-accent" data-astro-cid-j7pv25f6>Backed by Real Results</span> </h1> <p data-astro-source-file="src/pages/index.astro" data-astro-source-loc="38:14" class="text-lg text-muted-foreground" data-astro-cid-j7pv25f6>
-Get free daily picks, upgrade to VIP for more premium selections, and track our success rate in real time. Smart picks. Transparent tracking. No hype.
-</p> <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="41:14" class="flex flex-col sm:flex-row gap-4 pt-4" data-astro-cid-j7pv25f6> <a data-astro-source-file="src/pages/index.astro" data-astro-source-loc="42:16" href="#free-picks" class="bg-accent text-accent-foreground px-8 py-4 rounded font-bold uppercase hover:opacity-90 transition-opacity text-center" data-astro-cid-j7pv25f6>
-View Today's Free Picks
-</a> <a data-astro-source-file="src/pages/index.astro" data-astro-source-loc="45:16" href="#vip" class="border-2 border-accent text-accent px-8 py-4 rounded font-bold uppercase hover:bg-accent/10 transition-colors text-center" data-astro-cid-j7pv25f6>
-Join VIP
-</a> </div> </div>  <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="52:12" class="animate-fade-up" style="animation-delay: 200ms" data-astro-cid-j7pv25f6> <img data-astro-source-file="src/pages/index.astro" data-astro-source-loc="53:14" src="https://cdn.b12.io/client_media/YsVmVg7D/d798b275-27fe-11f1-a020-0242ac110002-zWpbryf6HMseZEVxwX3Oz.jpg" alt="Performance stats dashboard" class="w-full rounded-lg shadow-2xl shadow-accent/20" data-astro-cid-j7pv25f6> </div> </div> </div>  <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="59:8" class="absolute inset-0 opacity-5 pointer-events-none" style="background-image: linear-gradient(0deg, transparent 24%, rgba(0,255,136,0.1) 25%, rgba(0,255,136,0.1) 26%, transparent 27%, transparent 74%, rgba(0,255,136,0.1) 75%, rgba(0,255,136,0.1) 76%, transparent 77%, transparent); background-size: 50px 50px;" data-astro-cid-j7pv25f6></div> </section>  <section data-astro-source-file="src/pages/index.astro" data-astro-source-loc="63:6" id="free-picks" class="py-20 px-4 bg-primary border-t border-border" data-astro-cid-j7pv25f6> <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="64:8" class="max-w-7xl mx-auto" data-astro-cid-j7pv25f6> <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="65:10" class="text-center mb-12" data-astro-cid-j7pv25f6> <h2 data-astro-source-file="src/pages/index.astro" data-astro-source-loc="66:12" class="text-4xl font-bold mb-4" data-astro-cid-j7pv25f6>Today's Free Picks</h2> <p data-astro-source-file="src/pages/index.astro" data-astro-source-loc="67:12" class="text-lg text-muted-foreground max-w-2xl mx-auto" data-astro-cid-j7pv25f6>
-Get expert picks updated daily. All information is transparent and our track record speaks for itself.
-</p> <p data-astro-source-file="src/pages/index.astro" data-astro-source-loc="70:12" class="text-sm text-muted-foreground mt-4" data-astro-cid-j7pv25f6>Updated daily. All times in EST.</p> </div> <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="73:10" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8" data-astro-cid-j7pv25f6> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="28:0" class="bg-card border border-border rounded-lg p-6 hover:shadow-lg hover:shadow-accent/20 transition-all duration-300"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="29:2" class="flex justify-between items-start mb-4"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="30:4"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="31:6" class="text-sm text-muted-foreground uppercase tracking-wide">NFL</div> <h3 data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="32:6" class="text-lg font-bold mt-1">Kansas City Chiefs vs Buffalo Bills</h3> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="34:4" class="flex gap-2"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="35:17" class="bg-accent text-accent-foreground px-3 py-1 rounded text-xs font-bold uppercase">FREE</span>  </div> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="40:2" class="space-y-3 mb-4"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="41:4" class="flex justify-between items-center"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="42:6" class="text-muted-foreground text-sm">Line / Odds</span> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="43:6" class="font-mono text-accent font-bold text-lg">-3.5 (-110)</span> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="45:4" class="flex justify-between items-center"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="46:6" class="text-muted-foreground text-sm">Pick Type</span> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="47:6" class="text-foreground font-medium">Spread</span> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="49:4" class="flex justify-between items-center"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="50:6" class="text-muted-foreground text-sm">Confidence</span> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="51:6" class="font-bold uppercase tracking-wider text-green-400">HIGH</span> </div> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="55:2" class="pt-4 border-t border-border"> <p data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="56:4" class="text-xs text-muted-foreground">
-Updated daily. All times in EST.
-</p> </div> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="28:0" class="bg-card border border-border rounded-lg p-6 hover:shadow-lg hover:shadow-accent/20 transition-all duration-300"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="29:2" class="flex justify-between items-start mb-4"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="30:4"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="31:6" class="text-sm text-muted-foreground uppercase tracking-wide">NBA</div> <h3 data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="32:6" class="text-lg font-bold mt-1">LA Lakers Over Golden State Warriors</h3> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="34:4" class="flex gap-2"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="35:17" class="bg-accent text-accent-foreground px-3 py-1 rounded text-xs font-bold uppercase">FREE</span>  </div> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="40:2" class="space-y-3 mb-4"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="41:4" class="flex justify-between items-center"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="42:6" class="text-muted-foreground text-sm">Line / Odds</span> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="43:6" class="font-mono text-accent font-bold text-lg">221.5 (-110)</span> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="45:4" class="flex justify-between items-center"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="46:6" class="text-muted-foreground text-sm">Pick Type</span> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="47:6" class="text-foreground font-medium">Total</span> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="49:4" class="flex justify-between items-center"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="50:6" class="text-muted-foreground text-sm">Confidence</span> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="51:6" class="font-bold uppercase tracking-wider text-yellow-400">MEDIUM</span> </div> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="55:2" class="pt-4 border-t border-border"> <p data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="56:4" class="text-xs text-muted-foreground">
-Updated daily. All times in EST.
-</p> </div> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="28:0" class="bg-card border border-border rounded-lg p-6 hover:shadow-lg hover:shadow-accent/20 transition-all duration-300"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="29:2" class="flex justify-between items-start mb-4"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="30:4"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="31:6" class="text-sm text-muted-foreground uppercase tracking-wide">MLB</div> <h3 data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="32:6" class="text-lg font-bold mt-1">New York Yankees</h3> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="34:4" class="flex gap-2"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="35:17" class="bg-accent text-accent-foreground px-3 py-1 rounded text-xs font-bold uppercase">FREE</span>  </div> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="40:2" class="space-y-3 mb-4"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="41:4" class="flex justify-between items-center"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="42:6" class="text-muted-foreground text-sm">Line / Odds</span> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="43:6" class="font-mono text-accent font-bold text-lg">-1.5 (-120)</span> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="45:4" class="flex justify-between items-center"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="46:6" class="text-muted-foreground text-sm">Pick Type</span> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="47:6" class="text-foreground font-medium">Run Line</span> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="49:4" class="flex justify-between items-center"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="50:6" class="text-muted-foreground text-sm">Confidence</span> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="51:6" class="font-bold uppercase tracking-wider text-green-400">HIGH</span> </div> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="55:2" class="pt-4 border-t border-border"> <p data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="56:4" class="text-xs text-muted-foreground">
-Updated daily. All times in EST.
-</p> </div> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="28:0" class="bg-card border border-border rounded-lg p-6 hover:shadow-lg hover:shadow-accent/20 transition-all duration-300"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="29:2" class="flex justify-between items-start mb-4"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="30:4"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="31:6" class="text-sm text-muted-foreground uppercase tracking-wide">NHL</div> <h3 data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="32:6" class="text-lg font-bold mt-1">Colorado Avalanche vs Dallas Stars</h3> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="34:4" class="flex gap-2"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="35:17" class="bg-accent text-accent-foreground px-3 py-1 rounded text-xs font-bold uppercase">FREE</span>  </div> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="40:2" class="space-y-3 mb-4"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="41:4" class="flex justify-between items-center"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="42:6" class="text-muted-foreground text-sm">Line / Odds</span> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="43:6" class="font-mono text-accent font-bold text-lg">-1.5 (-115)</span> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="45:4" class="flex justify-between items-center"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="46:6" class="text-muted-foreground text-sm">Pick Type</span> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="47:6" class="text-foreground font-medium">Puck Line</span> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="49:4" class="flex justify-between items-center"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="50:6" class="text-muted-foreground text-sm">Confidence</span> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="51:6" class="font-bold uppercase tracking-wider text-yellow-400">MEDIUM</span> </div> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="55:2" class="pt-4 border-t border-border"> <p data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="56:4" class="text-xs text-muted-foreground">
-Updated daily. All times in EST.
-</p> </div> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="28:0" class="bg-card border border-border rounded-lg p-6 hover:shadow-lg hover:shadow-accent/20 transition-all duration-300"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="29:2" class="flex justify-between items-start mb-4"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="30:4"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="31:6" class="text-sm text-muted-foreground uppercase tracking-wide">NCAA Basketball</div> <h3 data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="32:6" class="text-lg font-bold mt-1">Duke Blue Devils</h3> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="34:4" class="flex gap-2"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="35:17" class="bg-accent text-accent-foreground px-3 py-1 rounded text-xs font-bold uppercase">FREE</span>  </div> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="40:2" class="space-y-3 mb-4"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="41:4" class="flex justify-between items-center"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="42:6" class="text-muted-foreground text-sm">Line / Odds</span> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="43:6" class="font-mono text-accent font-bold text-lg">-7 (-110)</span> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="45:4" class="flex justify-between items-center"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="46:6" class="text-muted-foreground text-sm">Pick Type</span> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="47:6" class="text-foreground font-medium">Spread</span> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="49:4" class="flex justify-between items-center"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="50:6" class="text-muted-foreground text-sm">Confidence</span> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="51:6" class="font-bold uppercase tracking-wider text-orange-400">LOW</span> </div> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="55:2" class="pt-4 border-t border-border"> <p data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="56:4" class="text-xs text-muted-foreground">
-Updated daily. All times in EST.
-</p> </div> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="28:0" class="bg-card border border-border rounded-lg p-6 hover:shadow-lg hover:shadow-accent/20 transition-all duration-300"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="29:2" class="flex justify-between items-start mb-4"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="30:4"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="31:6" class="text-sm text-muted-foreground uppercase tracking-wide">Soccer</div> <h3 data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="32:6" class="text-lg font-bold mt-1">Manchester City Win</h3> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="34:4" class="flex gap-2"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="35:17" class="bg-accent text-accent-foreground px-3 py-1 rounded text-xs font-bold uppercase">FREE</span>  </div> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="40:2" class="space-y-3 mb-4"> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="41:4" class="flex justify-between items-center"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="42:6" class="text-muted-foreground text-sm">Line / Odds</span> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="43:6" class="font-mono text-accent font-bold text-lg">-140 (-110)</span> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="45:4" class="flex justify-between items-center"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="46:6" class="text-muted-foreground text-sm">Pick Type</span> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="47:6" class="text-foreground font-medium">Moneyline</span> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="49:4" class="flex justify-between items-center"> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="50:6" class="text-muted-foreground text-sm">Confidence</span> <span data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="51:6" class="font-bold uppercase tracking-wider text-green-400">HIGH</span> </div> </div> <div data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="55:2" class="pt-4 border-t border-border"> <p data-astro-source-file="src/components/PickCard.astro" data-astro-source-loc="56:4" class="text-xs text-muted-foreground">
-Updated daily. All times in EST.
-</p> </div> </div> </div> <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="130:10" class="text-center" data-astro-cid-j7pv25f6> <a data-astro-source-file="src/pages/index.astro" data-astro-source-loc="131:12" href="/picks" class="inline-block bg-accent/10 border border-accent text-accent px-8 py-3 rounded font-bold uppercase hover:bg-accent/20 transition-colors" data-astro-cid-j7pv25f6>
-View All Free Picks →
-</a> </div> </div> </section>  <section data-astro-source-file="src/pages/index.astro" data-astro-source-loc="139:6" id="vip" class="py-20 px-4 bg-gradient-to-b from-primary/50 to-primary" data-astro-cid-j7pv25f6> <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="140:8" class="max-w-7xl mx-auto" data-astro-cid-j7pv25f6> <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="141:10" class="text-center mb-12" data-astro-cid-j7pv25f6> <h2 data-astro-source-file="src/pages/index.astro" data-astro-source-loc="142:12" class="text-4xl font-bold mb-4" data-astro-cid-j7pv25f6>VIP Picks: More Action, Deeper Insight</h2> <p data-astro-source-file="src/pages/index.astro" data-astro-source-loc="143:12" class="text-lg text-muted-foreground max-w-2xl mx-auto" data-astro-cid-j7pv25f6>
-Unlock premium picks with detailed reasoning, earlier access, and priority support. Serious bettors get serious picks.
-</p> </div> <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="148:10" class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12" data-astro-cid-j7pv25f6> <div data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="13:0" class="rounded-lg p-8 border transition-all duration-300 bg-card border-border"> <h3 data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="18:2" class="text-2xl font-bold mb-2">Monthly VIP</h3> <div data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="19:2" class="mb-6"> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="20:4" class="text-4xl font-bold text-accent">$29</span> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="21:4" class="text-muted-foreground ml-2">/ month</span> </div> <ul data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="24:2" class="space-y-3 mb-8"> <li data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="26:6" class="flex items-center gap-3"> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="27:8" class="text-accent font-bold">✓</span> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="28:8" class="text-foreground">15+ premium picks daily</span> </li><li data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="26:6" class="flex items-center gap-3"> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="27:8" class="text-accent font-bold">✓</span> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="28:8" class="text-foreground">Early access (opens at 6 AM ET)</span> </li><li data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="26:6" class="flex items-center gap-3"> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="27:8" class="text-accent font-bold">✓</span> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="28:8" class="text-foreground">Detailed reasoning &amp; analysis</span> </li><li data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="26:6" class="flex items-center gap-3"> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="27:8" class="text-accent font-bold">✓</span> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="28:8" class="text-foreground">Priority email support</span> </li><li data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="26:6" class="flex items-center gap-3"> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="27:8" class="text-accent font-bold">✓</span> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="28:8" class="text-foreground">Advanced stats dashboard</span> </li><li data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="26:6" class="flex items-center gap-3"> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="27:8" class="text-accent font-bold">✓</span> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="28:8" class="text-foreground">Historical pick data</span> </li> </ul>  <button data-astro-source-file="src/pages/index.astro" data-astro-source-loc="162:14" class="w-full bg-accent text-accent-foreground px-6 py-3 rounded font-bold uppercase hover:opacity-90 transition-opacity" data-astro-cid-j7pv25f6>
-Start Monthly
-</button>  </div> <div data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="13:0" class="rounded-lg p-8 border transition-all duration-300 bg-accent/10 border-accent shadow-lg shadow-accent/20"> <h3 data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="18:2" class="text-2xl font-bold mb-2">Annual VIP</h3> <div data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="19:2" class="mb-6"> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="20:4" class="text-4xl font-bold text-accent">$249</span> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="21:4" class="text-muted-foreground ml-2">/ year</span> </div> <ul data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="24:2" class="space-y-3 mb-8"> <li data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="26:6" class="flex items-center gap-3"> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="27:8" class="text-accent font-bold">✓</span> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="28:8" class="text-foreground">15+ premium picks daily</span> </li><li data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="26:6" class="flex items-center gap-3"> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="27:8" class="text-accent font-bold">✓</span> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="28:8" class="text-foreground">Early access (opens at 6 AM ET)</span> </li><li data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="26:6" class="flex items-center gap-3"> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="27:8" class="text-accent font-bold">✓</span> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="28:8" class="text-foreground">Detailed reasoning &amp; analysis</span> </li><li data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="26:6" class="flex items-center gap-3"> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="27:8" class="text-accent font-bold">✓</span> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="28:8" class="text-foreground">Priority email support</span> </li><li data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="26:6" class="flex items-center gap-3"> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="27:8" class="text-accent font-bold">✓</span> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="28:8" class="text-foreground">Advanced stats dashboard</span> </li><li data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="26:6" class="flex items-center gap-3"> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="27:8" class="text-accent font-bold">✓</span> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="28:8" class="text-foreground">Historical pick data</span> </li><li data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="26:6" class="flex items-center gap-3"> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="27:8" class="text-accent font-bold">✓</span> <span data-astro-source-file="src/components/PricingCard.astro" data-astro-source-loc="28:8" class="text-foreground">Save 28% vs monthly</span> </li> </ul>  <button data-astro-source-file="src/pages/index.astro" data-astro-source-loc="182:14" class="w-full bg-accent text-accent-foreground px-6 py-3 rounded font-bold uppercase hover:opacity-90 transition-opacity" data-astro-cid-j7pv25f6>
-Get Annual Plan
-</button>  </div> </div> <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="188:10" class="bg-card border border-border rounded-lg p-8 max-w-3xl mx-auto" data-astro-cid-j7pv25f6> <h3 data-astro-source-file="src/pages/index.astro" data-astro-source-loc="189:12" class="font-bold text-lg mb-4 text-accent" data-astro-cid-j7pv25f6>Why Choose VIP?</h3> <ul data-astro-source-file="src/pages/index.astro" data-astro-source-loc="190:12" class="space-y-3 text-foreground" data-astro-cid-j7pv25f6> <li data-astro-source-file="src/pages/index.astro" data-astro-source-loc="191:14" class="flex gap-3" data-astro-cid-j7pv25f6> <span data-astro-source-file="src/pages/index.astro" data-astro-source-loc="192:16" class="text-accent font-bold" data-astro-cid-j7pv25f6>→</span> <span data-astro-source-file="src/pages/index.astro" data-astro-source-loc="193:16" data-astro-cid-j7pv25f6><strong data-astro-source-file="src/pages/index.astro" data-astro-source-loc="193:22" data-astro-cid-j7pv25f6>More Picks:</strong> We release 15+ premium selections daily, including prop bets and alternative lines</span> </li> <li data-astro-source-file="src/pages/index.astro" data-astro-source-loc="195:14" class="flex gap-3" data-astro-cid-j7pv25f6> <span data-astro-source-file="src/pages/index.astro" data-astro-source-loc="196:16" class="text-accent font-bold" data-astro-cid-j7pv25f6>→</span> <span data-astro-source-file="src/pages/index.astro" data-astro-source-loc="197:16" data-astro-cid-j7pv25f6><strong data-astro-source-file="src/pages/index.astro" data-astro-source-loc="197:22" data-astro-cid-j7pv25f6>Early Access:</strong> Get picks at 6 AM ET before the market adjusts, giving you the best odds</span> </li> <li data-astro-source-file="src/pages/index.astro" data-astro-source-loc="199:14" class="flex gap-3" data-astro-cid-j7pv25f6> <span data-astro-source-file="src/pages/index.astro" data-astro-source-loc="200:16" class="text-accent font-bold" data-astro-cid-j7pv25f6>→</span> <span data-astro-source-file="src/pages/index.astro" data-astro-source-loc="201:16" data-astro-cid-j7pv25f6><strong data-astro-source-file="src/pages/index.astro" data-astro-source-loc="201:22" data-astro-cid-j7pv25f6>Deep Analysis:</strong> Each pick includes detailed reasoning, key stats, and injury updates</span> </li> <li data-astro-source-file="src/pages/index.astro" data-astro-source-loc="203:14" class="flex gap-3" data-astro-cid-j7pv25f6> <span data-astro-source-file="src/pages/index.astro" data-astro-source-loc="204:16" class="text-accent font-bold" data-astro-cid-j7pv25f6>→</span> <span data-astro-source-file="src/pages/index.astro" data-astro-source-loc="205:16" data-astro-cid-j7pv25f6><strong data-astro-source-file="src/pages/index.astro" data-astro-source-loc="205:22" data-astro-cid-j7pv25f6>Track Everything:</strong> Our dashboard tracks every pick, win rate by sport, and ROI by month</span> </li> </ul> </div> </div> </section>  <section data-astro-source-file="src/pages/index.astro" data-astro-source-loc="213:6" id="results" class="py-20 px-4 bg-primary border-t border-border" data-astro-cid-j7pv25f6> <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="214:8" class="max-w-7xl mx-auto" data-astro-cid-j7pv25f6> <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="215:10" class="text-center mb-12" data-astro-cid-j7pv25f6> <h2 data-astro-source-file="src/pages/index.astro" data-astro-source-loc="216:12" class="text-4xl font-bold mb-4" data-astro-cid-j7pv25f6>Track Record & Success Rate</h2> <p data-astro-source-file="src/pages/index.astro" data-astro-source-loc="217:12" class="text-lg text-muted-foreground max-w-2xl mx-auto" data-astro-cid-j7pv25f6>
-We track every pick. See our transparent results and current success metrics.
-</p> </div> <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="222:10" class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8" data-astro-cid-j7pv25f6>  <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="224:12" class="overflow-hidden rounded-lg border border-border" data-astro-cid-j7pv25f6> <table data-astro-source-file="src/pages/index.astro" data-astro-source-loc="225:14" class="w-full" data-astro-cid-j7pv25f6> <thead data-astro-source-file="src/pages/index.astro" data-astro-source-loc="226:16" class="bg-card border-b border-border" data-astro-cid-j7pv25f6> <tr data-astro-source-file="src/pages/index.astro" data-astro-source-loc="227:18" data-astro-cid-j7pv25f6> <th data-astro-source-file="src/pages/index.astro" data-astro-source-loc="228:20" class="px-4 py-3 text-left text-sm font-bold uppercase text-accent" data-astro-cid-j7pv25f6>Date</th> <th data-astro-source-file="src/pages/index.astro" data-astro-source-loc="229:20" class="px-4 py-3 text-left text-sm font-bold uppercase text-accent" data-astro-cid-j7pv25f6>Pick</th> <th data-astro-source-file="src/pages/index.astro" data-astro-source-loc="230:20" class="px-4 py-3 text-left text-sm font-bold uppercase text-accent" data-astro-cid-j7pv25f6>Result</th> <th data-astro-source-file="src/pages/index.astro" data-astro-source-loc="231:20" class="px-4 py-3 text-left text-sm font-bold uppercase text-accent" data-astro-cid-j7pv25f6>Odds</th> </tr> </thead> <tbody data-astro-source-file="src/pages/index.astro" data-astro-source-loc="234:16" class="divide-y divide-border" data-astro-cid-j7pv25f6> <tr data-astro-source-file="src/pages/index.astro" data-astro-source-loc="235:18" class="bg-primary/50 hover:bg-card/50 transition-colors" data-astro-cid-j7pv25f6> <td data-astro-source-file="src/pages/index.astro" data-astro-source-loc="236:20" class="px-4 py-3 text-sm text-muted-foreground" data-astro-cid-j7pv25f6>03/24</td> <td data-astro-source-file="src/pages/index.astro" data-astro-source-loc="237:20" class="px-4 py-3 text-sm text-foreground" data-astro-cid-j7pv25f6>KC Chiefs -3.5</td> <td data-astro-source-file="src/pages/index.astro" data-astro-source-loc="238:20" class="px-4 py-3 text-sm" data-astro-cid-j7pv25f6><span data-astro-source-file="src/pages/index.astro" data-astro-source-loc="238:50" class="bg-green-900/30 text-green-300 px-2 py-1 rounded text-xs font-bold" data-astro-cid-j7pv25f6>WIN</span></td> <td data-astro-source-file="src/pages/index.astro" data-astro-source-loc="239:20" class="px-4 py-3 text-sm text-accent font-mono" data-astro-cid-j7pv25f6>-110</td> </tr> <tr data-astro-source-file="src/pages/index.astro" data-astro-source-loc="241:18" class="bg-primary/50 hover:bg-card/50 transition-colors" data-astro-cid-j7pv25f6> <td data-astro-source-file="src/pages/index.astro" data-astro-source-loc="242:20" class="px-4 py-3 text-sm text-muted-foreground" data-astro-cid-j7pv25f6>03/24</td> <td data-astro-source-file="src/pages/index.astro" data-astro-source-loc="243:20" class="px-4 py-3 text-sm text-foreground" data-astro-cid-j7pv25f6>LAL O221.5</td> <td data-astro-source-file="src/pages/index.astro" data-astro-source-loc="244:20" class="px-4 py-3 text-sm" data-astro-cid-j7pv25f6><span data-astro-source-file="src/pages/index.astro" data-astro-source-loc="244:50" class="bg-red-900/30 text-red-300 px-2 py-1 rounded text-xs font-bold" data-astro-cid-j7pv25f6>LOSS</span></td> <td data-astro-source-file="src/pages/index.astro" data-astro-source-loc="245:20" class="px-4 py-3 text-sm text-accent font-mono" data-astro-cid-j7pv25f6>-110</td> </tr> <tr data-astro-source-file="src/pages/index.astro" data-astro-source-loc="247:18" class="bg-primary/50 hover:bg-card/50 transition-colors" data-astro-cid-j7pv25f6> <td data-astro-source-file="src/pages/index.astro" data-astro-source-loc="248:20" class="px-4 py-3 text-sm text-muted-foreground" data-astro-cid-j7pv25f6>03/23</td> <td data-astro-source-file="src/pages/index.astro" data-astro-source-loc="249:20" class="px-4 py-3 text-sm text-foreground" data-astro-cid-j7pv25f6>NYY -1.5</td> <td data-astro-source-file="src/pages/index.astro" data-astro-source-loc="250:20" class="px-4 py-3 text-sm" data-astro-cid-j7pv25f6><span data-astro-source-file="src/pages/index.astro" data-astro-source-loc="250:50" class="bg-green-900/30 text-green-300 px-2 py-1 rounded text-xs font-bold" data-astro-cid-j7pv25f6>WIN</span></td> <td data-astro-source-file="src/pages/index.astro" data-astro-source-loc="251:20" class="px-4 py-3 text-sm text-accent font-mono" data-astro-cid-j7pv25f6>-120</td> </tr> <tr data-astro-source-file="src/pages/index.astro" data-astro-source-loc="253:18" class="bg-primary/50 hover:bg-card/50 transition-colors" data-astro-cid-j7pv25f6> <td data-astro-source-file="src/pages/index.astro" data-astro-source-loc="254:20" class="px-4 py-3 text-sm text-muted-foreground" data-astro-cid-j7pv25f6>03/23</td> <td data-astro-source-file="src/pages/index.astro" data-astro-source-loc="255:20" class="px-4 py-3 text-sm text-foreground" data-astro-cid-j7pv25f6>COL -1.5</td> <td data-astro-source-file="src/pages/index.astro" data-astro-source-loc="256:20" class="px-4 py-3 text-sm" data-astro-cid-j7pv25f6><span data-astro-source-file="src/pages/index.astro" data-astro-source-loc="256:50" class="bg-green-900/30 text-green-300 px-2 py-1 rounded text-xs font-bold" data-astro-cid-j7pv25f6>WIN</span></td> <td data-astro-source-file="src/pages/index.astro" data-astro-source-loc="257:20" class="px-4 py-3 text-sm text-accent font-mono" data-astro-cid-j7pv25f6>-115</td> </tr> <tr data-astro-source-file="src/pages/index.astro" data-astro-source-loc="259:18" class="bg-primary/50 hover:bg-card/50 transition-colors" data-astro-cid-j7pv25f6> <td data-astro-source-file="src/pages/index.astro" data-astro-source-loc="260:20" class="px-4 py-3 text-sm text-muted-foreground" data-astro-cid-j7pv25f6>03/22</td> <td data-astro-source-file="src/pages/index.astro" data-astro-source-loc="261:20" class="px-4 py-3 text-sm text-foreground" data-astro-cid-j7pv25f6>Duke -7</td> <td data-astro-source-file="src/pages/index.astro" data-astro-source-loc="262:20" class="px-4 py-3 text-sm" data-astro-cid-j7pv25f6><span data-astro-source-file="src/pages/index.astro" data-astro-source-loc="262:50" class="bg-green-900/30 text-green-300 px-2 py-1 rounded text-xs font-bold" data-astro-cid-j7pv25f6>WIN</span></td> <td data-astro-source-file="src/pages/index.astro" data-astro-source-loc="263:20" class="px-4 py-3 text-sm text-accent font-mono" data-astro-cid-j7pv25f6>-110</td> </tr> </tbody> </table> </div>  <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="270:12" class="space-y-6" data-astro-cid-j7pv25f6> <div data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="20:0" class="bg-card border border-border rounded-lg p-6 flex flex-col h-full"> <div data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="21:2" class="flex items-start justify-between mb-4"> <div data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="22:4"> <p data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="23:6" class="text-sm text-muted-foreground uppercase tracking-wide">7-Day Win Rate</p> <h3 data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="24:6" class="text-3xl font-bold text-accent mt-2"> 67<span data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="25:24" class="text-lg ml-1">%</span> </h3> </div> <span data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="28:13" class="text-3xl text-green-400">📈</span> </div> <p data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="32:4" class="text-sm text-muted-foreground mt-auto"> 12 wins, 6 losses in last 7 days </p> </div> <div data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="20:0" class="bg-card border border-border rounded-lg p-6 flex flex-col h-full"> <div data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="21:2" class="flex items-start justify-between mb-4"> <div data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="22:4"> <p data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="23:6" class="text-sm text-muted-foreground uppercase tracking-wide">30-Day ROI</p> <h3 data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="24:6" class="text-3xl font-bold text-accent mt-2"> 14.2<span data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="25:24" class="text-lg ml-1">%</span> </h3> </div> <span data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="28:13" class="text-3xl text-green-400">💰</span> </div> <p data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="32:4" class="text-sm text-muted-foreground mt-auto"> 143 units gained on 1000 unit sample </p> </div> <div data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="20:0" class="bg-card border border-border rounded-lg p-6 flex flex-col h-full"> <div data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="21:2" class="flex items-start justify-between mb-4"> <div data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="22:4"> <p data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="23:6" class="text-sm text-muted-foreground uppercase tracking-wide">Total Units Won</p> <h3 data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="24:6" class="text-3xl font-bold text-accent mt-2"> 512 </h3> </div> <span data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="28:13" class="text-3xl text-green-400">✓</span> </div> <p data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="32:4" class="text-sm text-muted-foreground mt-auto"> Since tracking began </p> </div> <div data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="20:0" class="bg-card border border-border rounded-lg p-6 flex flex-col h-full"> <div data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="21:2" class="flex items-start justify-between mb-4"> <div data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="22:4"> <p data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="23:6" class="text-sm text-muted-foreground uppercase tracking-wide">Picks This Month</p> <h3 data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="24:6" class="text-3xl font-bold text-accent mt-2"> 89 </h3> </div> <span data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="28:13" class="text-3xl text-muted-foreground">📊</span> </div> <p data-astro-source-file="src/components/StatsCard.astro" data-astro-source-loc="32:4" class="text-sm text-muted-foreground mt-auto"> Across all sports </p> </div> </div> </div> <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="306:10" class="text-center" data-astro-cid-j7pv25f6> <a data-astro-source-file="src/pages/index.astro" data-astro-source-loc="307:12" href="/results" class="inline-block bg-accent text-accent-foreground px-8 py-3 rounded font-bold uppercase hover:opacity-90 transition-opacity" data-astro-cid-j7pv25f6>
-View Full Results →
-</a> </div> </div> </section>  <section data-astro-source-file="src/pages/index.astro" data-astro-source-loc="315:6" id="about" class="py-20 px-4 bg-gradient-to-b from-primary to-primary/80 border-t border-border" data-astro-cid-j7pv25f6> <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="316:8" class="max-w-4xl mx-auto" data-astro-cid-j7pv25f6> <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="317:10" class="text-center mb-12" data-astro-cid-j7pv25f6> <h2 data-astro-source-file="src/pages/index.astro" data-astro-source-loc="318:12" class="text-4xl font-bold mb-4" data-astro-cid-j7pv25f6>About Our Methodology</h2> <p data-astro-source-file="src/pages/index.astro" data-astro-source-loc="319:12" class="text-lg text-muted-foreground" data-astro-cid-j7pv25f6>
-Transparency and data-driven analysis are at the heart of everything we do.
-</p> </div> <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="324:10" class="bg-card border border-border rounded-lg p-8 space-y-6 mb-8" data-astro-cid-j7pv25f6> <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="325:12" data-astro-cid-j7pv25f6> <h3 data-astro-source-file="src/pages/index.astro" data-astro-source-loc="326:14" class="font-bold text-xl text-accent mb-3" data-astro-cid-j7pv25f6>How We Generate Picks</h3> <p data-astro-source-file="src/pages/index.astro" data-astro-source-loc="327:14" class="text-foreground leading-relaxed" data-astro-cid-j7pv25f6>
-Our team of experienced bettors and sports analysts uses advanced statistical models combined with expert knowledge to identify edges in the market. We analyze team statistics, injury reports, historical matchups, public betting trends, and line movement to find value before the market adjusts.
-</p> </div> <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="332:12" data-astro-cid-j7pv25f6> <h3 data-astro-source-file="src/pages/index.astro" data-astro-source-loc="333:14" class="font-bold text-xl text-accent mb-3" data-astro-cid-j7pv25f6>Transparency First</h3> <p data-astro-source-file="src/pages/index.astro" data-astro-source-loc="334:14" class="text-foreground leading-relaxed" data-astro-cid-j7pv25f6>
-Every single pick is tracked and published in real time. You'll see our wins, losses, and pushes. We calculate win rates by sport, by confidence level, and by time period so you can understand exactly how we perform. No cherry-picked results. No hiding losses.
-</p> </div> <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="339:12" data-astro-cid-j7pv25f6> <h3 data-astro-source-file="src/pages/index.astro" data-astro-source-loc="340:14" class="font-bold text-xl text-accent mb-3" data-astro-cid-j7pv25f6>Responsible Gaming</h3> <p data-astro-source-file="src/pages/index.astro" data-astro-source-loc="341:14" class="text-foreground leading-relaxed" data-astro-cid-j7pv25f6>
-Sports betting involves risk. We encourage all bettors to gamble responsibly, set strict limits, and only wager what they can afford to lose. Our picks are for informational purposes only. We are not licensed sportsbooks and cannot accept wagers. Always check local laws before placing bets.
-</p> </div> </div> <div data-astro-source-file="src/pages/index.astro" data-astro-source-loc="347:10" class="bg-accent/5 border border-accent/20 rounded-lg p-6" data-astro-cid-j7pv25f6> <h4 data-astro-source-file="src/pages/index.astro" data-astro-source-loc="348:12" class="font-bold text-lg text-accent mb-3" data-astro-cid-j7pv25f6>⚠️ Important Disclaimer</h4> <p data-astro-source-file="src/pages/index.astro" data-astro-source-loc="349:12" class="text-sm text-muted-foreground leading-relaxed" data-astro-cid-j7pv25f6>
-PickStats provides sports picks and analysis for informational purposes only. We are not a sportsbook and do not accept wagers. Past performance does not guarantee future results. Sports betting carries significant financial risk. Only wager money you can afford to lose. Please gamble responsibly and check local laws. If you or someone you know has a gambling problem, contact the National Council on Problem Gambling (1-800-GAMBLER).
-</p> </div> </div> </section> </main> <footer data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="5:0" class="bg-primary border-t border-border mt-20" data-astro-cid-sz7xmlte> <div data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="6:2" class="max-w-7xl mx-auto px-4 py-12" data-astro-cid-sz7xmlte>  <div data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="8:4" class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8" data-astro-cid-sz7xmlte>  <div data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="10:6" data-astro-cid-sz7xmlte> <div data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="11:8" class="flex items-center gap-2 mb-4" data-astro-cid-sz7xmlte> <span data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="12:10" class="text-xl font-bold text-accent font-rajdhani tracking-wider" data-astro-cid-sz7xmlte>PICK</span> <span data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="13:10" class="text-xl font-bold text-foreground font-rajdhani tracking-wider" data-astro-cid-sz7xmlte>STATS</span> </div> <p data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="15:8" class="text-sm text-muted-foreground" data-astro-cid-sz7xmlte>
-Daily sports betting picks backed by real results. Smart picks, transparent tracking.
-</p> </div>  <div data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="21:6" data-astro-cid-sz7xmlte> <h4 data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="22:8" class="font-bold uppercase text-sm mb-4 text-foreground" data-astro-cid-sz7xmlte>Quick Links</h4> <ul data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="23:8" class="space-y-2" data-astro-cid-sz7xmlte> <li data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="24:10" data-astro-cid-sz7xmlte><a data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="24:14" href="/index#free-picks" class="text-sm text-muted-foreground hover:text-accent transition-colors" data-astro-cid-sz7xmlte>Free Picks</a></li> <li data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="25:10" data-astro-cid-sz7xmlte><a data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="25:14" href="/index#vip" class="text-sm text-muted-foreground hover:text-accent transition-colors" data-astro-cid-sz7xmlte>VIP Subscription</a></li> <li data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="26:10" data-astro-cid-sz7xmlte><a data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="26:14" href="/results" class="text-sm text-muted-foreground hover:text-accent transition-colors" data-astro-cid-sz7xmlte>Track Record</a></li> <li data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="27:10" data-astro-cid-sz7xmlte><a data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="27:14" href="/about" class="text-sm text-muted-foreground hover:text-accent transition-colors" data-astro-cid-sz7xmlte>About Us</a></li> </ul> </div>  <div data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="32:6" data-astro-cid-sz7xmlte> <h4 data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="33:8" class="font-bold uppercase text-sm mb-4 text-foreground" data-astro-cid-sz7xmlte>Legal</h4> <ul data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="34:8" class="space-y-2" data-astro-cid-sz7xmlte> <li data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="35:10" data-astro-cid-sz7xmlte><a data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="35:14" href="#terms" class="text-sm text-muted-foreground hover:text-accent transition-colors" data-astro-cid-sz7xmlte>Terms of Service</a></li> <li data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="36:10" data-astro-cid-sz7xmlte><a data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="36:14" href="#privacy" class="text-sm text-muted-foreground hover:text-accent transition-colors" data-astro-cid-sz7xmlte>Privacy Policy</a></li> <li data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="37:10" data-astro-cid-sz7xmlte><a data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="37:14" href="#disclaimer" class="text-sm text-muted-foreground hover:text-accent transition-colors" data-astro-cid-sz7xmlte>Disclaimer</a></li> <li data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="38:10" data-astro-cid-sz7xmlte><a data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="38:14" href="#contact" class="text-sm text-muted-foreground hover:text-accent transition-colors" data-astro-cid-sz7xmlte>Contact</a></li> </ul> </div>  <div data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="43:6" data-astro-cid-sz7xmlte> <h4 data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="44:8" class="font-bold uppercase text-sm mb-4 text-foreground" data-astro-cid-sz7xmlte>Follow Us</h4> <div data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="45:8" class="flex gap-4" data-astro-cid-sz7xmlte> <a data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="46:10" href="https://twitter.com" target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-accent transition-colors text-lg" data-astro-cid-sz7xmlte>
-𝕏
-</a> <a data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="49:10" href="https://facebook.com" target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-accent transition-colors text-lg" data-astro-cid-sz7xmlte>
-f
-</a> <a data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="52:10" href="https://instagram.com" target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-accent transition-colors text-lg" data-astro-cid-sz7xmlte>
-📷
-</a> <a data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="55:10" href="https://youtube.com" target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-accent transition-colors text-lg" data-astro-cid-sz7xmlte>
-▶
-</a> </div> </div> </div>  <div data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="63:4" class="pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4" data-astro-cid-sz7xmlte> <div data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="64:6" class="text-xs text-muted-foreground" data-astro-cid-sz7xmlte> <p data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="65:8" data-astro-cid-sz7xmlte>© 2026 PickStats. Not a sportsbook. For information purposes only.</p> <p data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="66:8" class="mt-1" data-astro-cid-sz7xmlte>Always gamble responsibly. See <a data-astro-source-file="src/components/Footer.astro" data-astro-source-loc="66:55" href="#disclaimer" class="text-accent hover:underline" data-astro-cid-sz7xmlte>responsible gaming</a> for more.</p> </div> <div data-astro-source-file="src/components/B12Link.astro" data-astro-source-loc="5:0" class="by-b12" data-astro-cid-t7vw7plc> <a data-astro-source-file="src/components/B12Link.astro" data-astro-source-loc="6:2" href="https://www.b12.io/ai-web-design/?utm_source=client&utm_medium=footer&utm_campaign=ai-web-design" target="_blank" rel="nofollow noopener noreferrer" data-astro-cid-t7vw7plc><span data-astro-source-file="src/components/B12Link.astro" data-astro-source-loc="6:160" class="align-middle mr-[5px]" data-astro-cid-t7vw7plc>💜</span>Built with <svg data-astro-source-file="src/components/B12Link.astro" data-astro-source-loc="6:216" id="b12-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 179.8 79.2" data-astro-cid-t7vw7plc><title data-astro-source-file="src/components/B12Link.astro" data-astro-source-loc="6:295">B12</title><path data-astro-source-file="src/components/B12Link.astro" data-astro-source-loc="6:313" d="M53.9,46a12.87,12.87,0,0,0-4.6-2.9c-2.5-.8-3.2-.9-10.1-.9H28.3V69.5h10c9.2,0,10.5-.2,13.8-2.2s5.4-6.4,5.4-11.3c0-4.2-1.3-7.7-3.6-10M51.6,11.4A9.44,9.44,0,0,0,47.1,9c-2.3-.6-3.5-.6-10-.6H28.2V33.2h11c4.4,0,8-.6,10.2-1.6,3.5-1.5,5.8-5.8,5.8-10.7a12.37,12.37,0,0,0-3.6-9.5M71.8,68.5a16,16,0,0,1-6.1,6.3,19.75,19.75,0,0,1-9,2.8c-1.6.1-4.5.1-8.6.1H0V69.3H6.4a9.59,9.59,0,0,0,4-.5,3.35,3.35,0,0,0,1.5-1.6,5.59,5.59,0,0,0,.7-2.6c0-.6.1-1.6.1-3.3v-45c0-1.5-.1-2.7-.1-3.3a5.36,5.36,0,0,0-.7-2.6c-.7-1.6-2.1-2.1-5.5-2.1H0V0H36.6c3.9,0,6.9.1,9,.1C54,.3,60,2,65.1,5.6A17,17,0,0,1,72.3,20a16.15,16.15,0,0,1-5.4,12.6c-2.8,2.6-4.8,3.6-10.1,5.1,5.4,1.4,6.9,2,10,4,4.9,3,7.8,9,7.8,15.8a23,23,0,0,1-2.8,11" data-astro-cid-t7vw7plc></path><path data-astro-source-file="src/components/B12Link.astro" data-astro-source-loc="6:1012" d="M78.5,77.7V69.3h7a12,12,0,0,0,3.9-.4,3.71,3.71,0,0,0,1.4-1.6,5.53,5.53,0,0,0,.7-2.5c0-.6.1-1.6.1-3V29.2H78.5V21.7c10.7-.1,14.1-2.2,16.8-10.4h10V58.5l.1,3.3a19.58,19.58,0,0,0,.1,3,5.73,5.73,0,0,0,.6,2.5c.8,1.6,2,2,5.4,2H118v8.4Z" data-astro-cid-t7vw7plc></path><path data-astro-source-file="src/components/B12Link.astro" data-astro-source-loc="6:1251" d="M179.2,64.3c-1.4,9.8-7.4,14.9-17.1,14.9-5.5,0-9.9-1.4-20.3-6.5-3-1.4-4.7-2-6.2-2-3.2,0-5.1,1.9-5.1,5.3v1.6h-7.7c-.1-1.1-.1-2-.1-2.6a33.4,33.4,0,0,1,2.1-11.4c2.5-6.5,6.8-10.6,16.3-15.2q6.45-3.15,9-4.5a24.88,24.88,0,0,0,6.4-4.6,13.54,13.54,0,0,0,3.9-9.2c0-7.7-5.6-12.5-14.6-12.5-7.8,0-12.2,2.8-14,8.9a9,9,0,0,1,4.2-1.1c4.3,0,7.4,3.3,7.4,7.9,0,5.3-3.5,8.8-8.8,8.8-6.5,0-10.8-4.8-10.8-12a19.15,19.15,0,0,1,6.9-14.5c4.9-4.2,10.8-6.1,19.4-6.1,15.9,0,26.7,8.8,26.7,21.9,0,10.9-6.2,17-21,20.9C142,56,140.6,56.5,136,60.4c-2.3,1.9-3.2,3.2-4.2,6.6,3.4-2.8,5.8-3.7,10.5-3.7a27.28,27.28,0,0,1,4.1.3l9.7,1.6a46.32,46.32,0,0,0,6.2.6c7.5,0,10.7-3.3,10.8-11.7H180a100.9,100.9,0,0,1-.8,10.2" data-astro-cid-t7vw7plc></path></svg> </a> </div>  </div> </div> </footer>  <script>
-  !function(b12){var e=b12.createElement("script"),t=b12.getElementsByTagName("script")[0];e.async=1,e.src="//cdn.b12.io/prod_traffic/global.js",t.parentNode.insertBefore(e,t)}(document);
-</script> <script type="module">function g(e){return C(e)?.length!==0}function C(e){return e.querySelector(".g-recaptcha-response")?.value||""}function R(e){document.querySelectorAll(`#b12-recaptcha-error-${e}`).forEach(t=>t.style.display="none")}function E(e){const t=document.querySelector(`#b12-form-error-${e}`);if(!t)return;const o=`b12-recaptcha-error-${e}`;let n=document.querySelector(`#${o}`);n||(n=t.cloneNode(!0),n.id=o,n.textContent="Please complete the reCAPTCHA verification.",t.insertAdjacentElement("afterend",n)),n.style.display="block"}const u={isValid:g,getResponseElementValue:C,clearError:R,highlightError:E};function A(e,t){const o=Object.assign(document.createElement("input"),{type:"hidden",name:"google_recaptcha_token",value:e});t.appendChild(o)}const I=3,O={recaptcha_version:I},T=typeof __PRODUCT_URL__>"u"?"https://b12.io":__PRODUCT_URL__,f=`${T}/contact/send/`;function w(e,t){e.style.display="block",e.scrollIntoView({behavior:"smooth",block:"center"})}function P(e){e.method="POST",e.action=f;const t=e.dataset.formId||"",o=document.createElement("input");o.type="hidden",o.name="form_id",o.value=t;const n=document.createElement("input");n.type="text",n.style.display="none",n.name="sweet_auth_token",n.setAttribute("aria-hidden","true"),n.setAttribute("aria-label","Auth token");const c=document.createElement("input");c.type="hidden",c.style.display="none",c.name="next_page",c.value=window.location.href,e.appendChild(c),e.appendChild(o),e.appendChild(n);const i=document.createElement("input");i.type="hidden",i.name="ajax",i.value="true",e.appendChild(i);const b=e.getAttribute("action")||f,m=e.querySelector('button[type="submit"]'),s=parseInt(O.recaptcha_version);if(s===2){const l=Object.assign(document.createElement("input"),{type:"hidden",name:"recaptcha_version",value:String(s)});e.appendChild(l)}e.addEventListener("submit",function(l){if(l.preventDefault(),s===2&&(u.clearError(t),!u.isValid(e))){u.highlightError(t);return}s===2?(A(u.getResponseElementValue(e),e),p()):typeof grecaptcha<"u"?grecaptcha.ready(()=>{grecaptcha.execute("6Ld1R8kUAAAAAGEYGyd1RXFcdSGY03uF4y_yN40A",{}).then(h=>{A(h,e),p()})}):(console.info("grecaptcha undefined"),p());function p(){const h=new FormData(e),y=document.querySelector(`#b12-form-done-${t}`),_=document.querySelector(`#b12-form-error-${t}`);m.disabled=!0;const a={};h.forEach((r,d)=>{a[d]?a[d]=`${a[d]},${r}`:a[d]=r});const S=new URLSearchParams(a).toString();fetch(b,{method:"POST",headers:{"X-API-VERSION":"2","Content-Type":"application/x-www-form-urlencoded"},body:S}).then(function(r){if(!r.ok)throw new Error("Network response was not ok");return r.json()}).then(function(r){if(r&&r.redirect){window.location.href=r.redirect;return}_.style.display="none",y&&(e.style.display="none",w(y))}).catch(function(){_.style.display="block"}).finally(function(){m.disabled=!1})}})}function v(){document.querySelectorAll("form").forEach(e=>{const t=e.getAttribute("action")||"";!e.dataset.formId||t&&t!==f||P(e)})}document.addEventListener("DOMContentLoaded",v);</script> <script src="https://www.google.com/recaptcha/api.js?render=6Ld1R8kUAAAAAGEYGyd1RXFcdSGY03uF4y_yN40A" async="true"></script>  </body> </html>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+              <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50">
+                <ShieldCheck className="text-emerald-500 mb-4" size={32} />
+                <h3 className="text-xl font-bold text-white mb-2">High Value</h3>
+                <p className="text-slate-400 text-sm">Bajo riesgo. Buscamos la máxima probabilidad (Ej: +1.5 goles, Doble Oportunidad). Ideal para construir Bankroll.</p>
+              </div>
+              <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50">
+                <Target className="text-blue-500 mb-4" size={32} />
+                <h3 className="text-xl font-bold text-white mb-2">Intermedia</h3>
+                <p className="text-slate-400 text-sm">Riesgo moderado con cuotas equilibradas (Ej: Córners +7.5, Goles en HT). El balance perfecto.</p>
+              </div>
+              <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50">
+                <Zap className="text-amber-500 mb-4" size={32} />
+                <h3 className="text-xl font-bold text-white mb-2">High Factor</h3>
+                <p className="text-slate-400 text-sm">Alto riesgo, alta recompensa. Combinaciones complejas (Ej: Tarjetas + Ambos Anotan) para multiplicar beneficios.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ==========================================
+            VISTA: TABLA DE HOY (PICKS)
+        ========================================== */}
+        {activeTab === 'picks' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 border-b border-slate-800 pb-6">
+              <div>
+                <h2 className="text-3xl font-black text-white flex items-center gap-3">
+                  <Calendar className="text-emerald-500" /> 
+                  La Tabla de Hoy
+                </h2>
+                <p className="text-slate-400 mt-2">Nuestras 2 rondas de predicciones para el {data.date}</p>
+              </div>
+              <button 
+                onClick={loadData}
+                disabled={loading}
+                className="mt-4 sm:mt-0 flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors bg-slate-800 px-4 py-2 rounded-lg"
+              >
+                <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                {loading ? "Actualizando..." : "Sincronizar Datos"}
+              </button>
+            </div>
+
+            {/* Repaso del día anterior (Estrategia) */}
+            <div className="bg-blue-900/20 border border-blue-500/20 rounded-xl p-5 mb-10 flex gap-4">
+              <div className="mt-1"><AlertCircle className="text-blue-400" /></div>
+              <div>
+                <h4 className="font-bold text-blue-100 mb-1">Repaso de Ayer</h4>
+                <p className="text-blue-200/80 text-sm leading-relaxed">{data.stats.yesterdaySummary}</p>
+              </div>
+            </div>
+
+            {/* Ronda 1 */}
+            <div className="mb-12">
+              <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <span className="bg-slate-800 text-slate-300 px-3 py-1 rounded-md text-sm font-black tracking-widest uppercase">Ronda 1</span>
+                Partidos Tempranos
+              </h3>
+              <div className="space-y-3">
+                {data.picks.ronda1.map((pick) => (
+                  <PickCard key={pick.id} pick={pick} />
+                ))}
+              </div>
+            </div>
+
+            {/* Ronda 2 */}
+            <div>
+              <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <span className="bg-slate-800 text-slate-300 px-3 py-1 rounded-md text-sm font-black tracking-widest uppercase">Ronda 2</span>
+                Partidos de Tarde/Noche
+              </h3>
+              <div className="space-y-3">
+                {data.picks.ronda2.map((pick) => (
+                  <PickCard key={pick.id} pick={pick} />
+                ))}
+              </div>
+            </div>
+            
+            <div className="mt-12 bg-slate-800/50 p-6 rounded-xl border border-slate-700 text-center">
+              <p className="text-slate-400 text-sm mb-2">Recomendación Estratégica:</p>
+              <p className="text-white font-medium">Sugerimos combinar los picks <span className="text-emerald-400 font-bold">High Value</span> de ambas rondas para asegurar el Bankroll antes de arriesgar en categorías Intermedia o High Factor.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ==========================================
+            VISTA: RESULTADOS VIP (ESTADÍSTICAS)
+        ========================================== */}
+        {activeTab === 'results' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="mb-8 border-b border-slate-800 pb-6">
+              <h2 className="text-3xl font-black text-white flex items-center gap-3">
+                <Trophy className="text-yellow-500" /> 
+                Resultados & Estadísticas VIP
+              </h2>
+              <p className="text-slate-400 mt-2">Transparencia total. Revisa nuestra efectividad mensual por estrategia.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+              {/* Stats High Value */}
+              <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 text-center relative overflow-hidden">
+                <div className="absolute -right-4 -top-4 opacity-5">
+                  <ShieldCheck size={100} />
+                </div>
+                <h4 className="text-slate-400 font-semibold mb-2">% High Value</h4>
+                <div className="flex items-end justify-center gap-1">
+                  <span className="text-5xl font-black text-emerald-400">{data.stats.monthly.highValue}</span>
+                  <span className="text-xl text-emerald-500/50 font-bold mb-1">%</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-3 uppercase tracking-wider">Efectividad Mensual</p>
+              </div>
+
+              {/* Stats Intermedia */}
+              <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 text-center relative overflow-hidden">
+                <div className="absolute -right-4 -top-4 opacity-5">
+                  <Target size={100} />
+                </div>
+                <h4 className="text-slate-400 font-semibold mb-2">% Intermedia</h4>
+                <div className="flex items-end justify-center gap-1">
+                  <span className="text-5xl font-black text-blue-400">{data.stats.monthly.intermedia}</span>
+                  <span className="text-xl text-blue-500/50 font-bold mb-1">%</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-3 uppercase tracking-wider">Efectividad Mensual</p>
+              </div>
+
+              {/* Stats High Factor */}
+              <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 text-center relative overflow-hidden">
+                <div className="absolute -right-4 -top-4 opacity-5">
+                  <Zap size={100} />
+                </div>
+                <h4 className="text-slate-400 font-semibold mb-2">% High Factor</h4>
+                <div className="flex items-end justify-center gap-1">
+                  <span className="text-5xl font-black text-amber-400">{data.stats.monthly.highFactor}</span>
+                  <span className="text-xl text-amber-500/50 font-bold mb-1">%</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-3 uppercase tracking-wider">Efectividad Mensual</p>
+              </div>
+            </div>
+
+            {/* Muro para potenciales clientes VIP */}
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-emerald-500/20 rounded-2xl p-8 text-center shadow-2xl">
+              <Lock className="mx-auto text-emerald-500 mb-4" size={40} />
+              <h3 className="text-2xl font-bold text-white mb-3">Acceso al Historial Completo</h3>
+              <p className="text-slate-400 max-w-2xl mx-auto mb-6">
+                Los usuarios gratuitos pueden ver los resultados consolidados. Únete al canal VIP para acceder al desglose partido a partido, análisis profundo de por qué falló o acertó una predicción y gestión de bankroll personalizada.
+              </p>
+              <button className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-8 py-3 rounded-xl transition-all shadow-lg shadow-emerald-500/20">
+                Únete al VIP Ahora
+              </button>
+            </div>
+          </div>
+        )}
+
+      </main>
+    </div>
+  );
+}
