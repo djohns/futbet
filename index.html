@@ -1,1595 +1,347 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Futbet — Dashboard Analítico</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+import React, { useState, useEffect } from 'react';
+import { 
+  TrendingUp, 
+  CheckCircle, 
+  Calendar, 
+  Lock, 
+  ShieldCheck, 
+  Zap, 
+  Target, 
+  BarChart3, 
+  RefreshCw,
+  Trophy,
+  AlertCircle
+} from 'lucide-react';
 
-<style>
-  :root {
-    --bg-deep:     #080c14;
-    --bg-card:     #0d1422;
-    --bg-card2:    #111928;
-    --bg-hover:    #161f30;
-    --border:      #1e2d42;
-    --border-glow: #1e4a8a;
-    --accent-blue: #2979ff;
-    --accent-cyan: #00e5ff;
-    --green:       #00e676;
-    --green-dim:   #1b4332;
-    --red:         #ff1744;
-    --red-dim:     #3b0f1a;
-    --amber:       #ffc400;
-    --amber-dim:   #3b2900;
-    --safe:        #00e676;
-    --inter:       #ffc400;
-    --risky:       #ff5252;
-    --text-pri:    #e8edf5;
-    --text-sec:    #7a8fa6;
-    --text-dim:    #3d5068;
-    --mono:        'Space Mono', monospace;
-    --head:        'Rajdhani', sans-serif;
-    --body:        'Barlow', sans-serif;
+// ==========================================
+// 📊 CONFIGURACIÓN DE GOOGLE SHEETS
+// ==========================================
+// Para conectar esto a tu Google Sheet real:
+// 1. Ve a tu Google Sheet -> Archivo -> Compartir -> Publicar en la web.
+// 2. Selecciona "Todo el documento" o la hoja específica y elige "Valores separados por comas (.csv)".
+// 3. Pega ese enlace aquí abajo.
+const GOOGLE_SHEETS_CSV_URL = ""; 
+
+// ==========================================
+// 🗄️ DATOS DE PRUEBA (MOCK DATA)
+// ==========================================
+// Estos datos simulan lo que vendría de tu Google Sheet.
+// Incluye tu estrategia de 2 Rondas y 3 Categorías de Riesgo.
+const MOCK_DATA = {
+  date: "25 de Marzo, 2026",
+  picks: {
+    ronda1: [
+      { id: 1, match: "PSV vs Ajax", league: "Eredivisie", prediction: "+1.5 Goles Totales", category: "High Value", prob: "88%", odds: "1.25" },
+      { id: 2, match: "Al Nassr vs Al Hilal", league: "Saudi Pro League", prediction: "Ambos Anotan (Sí)", category: "Intermedia", prob: "72%", odds: "1.65" },
+      { id: 3, match: "Feyenoord vs AZ", league: "Eredivisie", prediction: "Local + Gol en HT", category: "High Factor", prob: "55%", odds: "2.30" },
+    ],
+    ronda2: [
+      { id: 4, match: "Arsenal vs Chelsea", league: "Premier League", prediction: "1X (Doble Oportunidad)", category: "High Value", prob: "82%", odds: "1.30" },
+      { id: 5, match: "Bayern Munich vs B. Dortmund", league: "Bundesliga", prediction: "+7.5 Córners", category: "Intermedia", prob: "75%", odds: "1.55" },
+      { id: 6, match: "Real Madrid vs Barcelona", league: "La Liga", prediction: "+2.5 Tarjetas + Ambos Anotan", category: "High Factor", prob: "48%", odds: "2.85" },
+    ]
+  },
+  stats: {
+    yesterdaySummary: "Ayer cerramos con un balance muy positivo: 4/6 aciertos en la Tabla General. ¡La estrategia High Value volvió a ser un éxito rotundo con 2/2 verdes!",
+    monthly: {
+      highValue: 85,
+      intermedia: 68,
+      highFactor: 42
+    },
+    totalProfitUnits: "+14.5"
   }
+};
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+export default function App() {
+  const [activeTab, setActiveTab] = useState('home');
+  const [data, setData] = useState(MOCK_DATA);
+  const [loading, setLoading] = useState(false);
 
-  html { scroll-behavior: smooth; }
+  // Función para simular la carga desde Google Sheets
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      if (GOOGLE_SHEETS_CSV_URL) {
+        // Lógica real para procesar el CSV
+        // const response = await fetch(GOOGLE_SHEETS_CSV_URL);
+        // const csvText = await response.text();
+        // Aquí iría una función para convertir el texto CSV a un objeto JSON (ej. usando PapaParse o split('\n'))
+        console.log("Cargando desde Google Sheets...");
+      } else {
+        // Usamos los datos de prueba si no hay URL
+        setTimeout(() => {
+          setData(MOCK_DATA);
+          setLoading(false);
+        }, 800);
+      }
+    } catch (error) {
+      console.error("Error cargando datos:", error);
+      setLoading(false);
+    }
+  };
 
-  body {
-    background: var(--bg-deep);
-    color: var(--text-pri);
-    font-family: var(--body);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  /* ─── SCANLINES OVERLAY ─── */
-  body::before {
-    content: '';
-    position: fixed; inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0,0,0,.07) 2px,
-      rgba(0,0,0,.07) 4px
+  // Componente de Tarjeta para Pronósticos
+  const PickCard = ({ pick }) => {
+    // Asignar colores e íconos según tu categoría de riesgo
+    let catColors = "";
+    let Icon = ShieldCheck;
+
+    if (pick.category === "High Value") {
+      catColors = "bg-emerald-500/10 border-emerald-500/30 text-emerald-400";
+      Icon = ShieldCheck;
+    } else if (pick.category === "Intermedia") {
+      catColors = "bg-blue-500/10 border-blue-500/30 text-blue-400";
+      Icon = Target;
+    } else if (pick.category === "High Factor") {
+      catColors = "bg-amber-500/10 border-amber-500/30 text-amber-400";
+      Icon = Zap;
+    }
+
+    return (
+      <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all hover:bg-slate-750">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">{pick.league}</span>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full border flex items-center gap-1 ${catColors}`}>
+              <Icon size={10} />
+              {pick.category}
+            </span>
+          </div>
+          <h3 className="font-bold text-lg text-white">{pick.match}</h3>
+          <p className="text-slate-300 font-medium mt-1">Pick: {pick.prediction}</p>
+        </div>
+        
+        <div className="flex flex-row md:flex-col gap-4 md:gap-1 items-center md:items-end w-full md:w-auto bg-slate-900 md:bg-transparent p-3 md:p-0 rounded-lg">
+          <div className="text-center md:text-right flex-1 md:flex-none">
+            <p className="text-xs text-slate-400">Probabilidad</p>
+            <p className="text-lg font-bold text-white">{pick.prob}</p>
+          </div>
+          <div className="w-px h-8 bg-slate-700 md:hidden block"></div>
+          <div className="text-center md:text-right flex-1 md:flex-none">
+            <p className="text-xs text-slate-400">Cuota</p>
+            <p className="text-lg font-bold text-emerald-400">{pick.odds}</p>
+          </div>
+        </div>
+      </div>
     );
-    pointer-events: none;
-    z-index: 1000;
-  }
+  };
 
-  /* ─── HEADER ─── */
-  header {
-    padding: 24px 32px 0;
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--border);
-    gap: 16px;
-  }
-  .logo-block { display: flex; flex-direction: column; gap: 4px; }
-  .logo-tag {
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: .2em;
-    color: var(--accent-cyan);
-    text-transform: uppercase;
-  }
-  .logo-title {
-    font-family: var(--head);
-    font-size: 32px;
-    font-weight: 700;
-    letter-spacing: .04em;
-    line-height: 1;
-    background: linear-gradient(90deg, #e8edf5 0%, #7ecfff 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  .logo-sub {
-    font-family: var(--body);
-    font-size: 13px;
-    font-weight: 300;
-    color: var(--text-sec);
-    letter-spacing: .04em;
-    padding-bottom: 20px;
-  }
-  .header-meta {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 4px;
-    padding-bottom: 20px;
-  }
-  .hm-date {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text-sec);
-  }
-  .hm-bankroll {
-    font-family: var(--mono);
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--green);
-  }
-  .hm-label {
-    font-family: var(--body);
-    font-size: 11px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: .1em;
-  }
-
-  /* ─── TABS ─── */
-  .tabs-bar {
-    display: flex;
-    gap: 0;
-    padding: 0 32px;
-    background: var(--bg-card);
-    border-bottom: 1px solid var(--border);
-  }
-  .tab-btn {
-    font-family: var(--head);
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    padding: 16px 28px;
-    background: none;
-    border: none;
-    color: var(--text-dim);
-    cursor: pointer;
-    border-bottom: 3px solid transparent;
-    transition: color .2s, border-color .2s;
-    position: relative;
-  }
-  .tab-btn.active {
-    color: var(--accent-cyan);
-    border-bottom-color: var(--accent-cyan);
-  }
-  .tab-btn:hover:not(.active) { color: var(--text-sec); }
-
-  /* ─── TAB PANELS ─── */
-  .tab-panel { display: none; padding: 28px 32px 48px; }
-  .tab-panel.active { display: block; }
-
-  /* ─── SECTION TITLE ─── */
-  .section-title {
-    font-family: var(--head);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: .2em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .section-title::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
-
-  /* ─── STAT GRID ─── */
-  .stat-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 12px;
-    margin-bottom: 32px;
-  }
-  .stat-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 18px 20px;
-    transition: border-color .2s, background .2s;
-  }
-  .stat-card:hover {
-    border-color: var(--border-glow);
-    background: var(--bg-hover);
-  }
-  .stat-label {
-    font-family: var(--body);
-    font-size: 11px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: .12em;
-    margin-bottom: 8px;
-  }
-  .stat-value {
-    font-family: var(--mono);
-    font-size: 28px;
-    font-weight: 700;
-    line-height: 1;
-  }
-  .stat-sub {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--text-sec);
-    margin-top: 4px;
-  }
-  .val-green { color: var(--green); }
-  .val-red   { color: var(--red); }
-  .val-amber { color: var(--amber); }
-  .val-blue  { color: var(--accent-cyan); }
-  .val-dim   { color: var(--text-sec); }
-
-  /* ─── PICKS TABLE ─── */
-  .picks-table-wrap {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    overflow: hidden;
-    margin-bottom: 28px;
-  }
-  .picks-table-header {
-    padding: 14px 20px;
-    background: var(--bg-card2);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    border-bottom: 1px solid var(--border);
-  }
-  .pth-session {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--accent-cyan);
-    letter-spacing: .1em;
-  }
-  .pth-date {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--text-dim);
-    margin-left: auto;
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-  }
-  thead th {
-    font-family: var(--head);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: .12em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    padding: 10px 16px;
-    text-align: left;
-    border-bottom: 1px solid var(--border);
-    white-space: nowrap;
-  }
-  tbody tr {
-    border-bottom: 1px solid rgba(30,45,66,.5);
-    transition: background .15s;
-  }
-  tbody tr:hover { background: var(--bg-hover); }
-  tbody tr:last-child { border-bottom: none; }
-  td {
-    padding: 11px 16px;
-    font-family: var(--body);
-    color: var(--text-pri);
-    white-space: nowrap;
-  }
-  td.mono { font-family: var(--mono); font-size: 12px; }
-  .badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 3px;
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-  }
-  .badge-win  { background: var(--green-dim); color: var(--green); }
-  .badge-loss { background: var(--red-dim); color: var(--red); }
-  .badge-pend { background: var(--amber-dim); color: var(--amber); }
-
-  /* ─── DONUT CHART ─── */
-  .charts-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 12px;
-    margin-bottom: 28px;
-  }
-  .chart-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 14px;
-  }
-  .chart-title {
-    font-family: var(--head);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: .15em;
-    text-transform: uppercase;
-    color: var(--text-sec);
-    text-align: center;
-  }
-  .donut-wrap { position: relative; width: 110px; height: 110px; }
-  .donut-wrap svg { transform: rotate(-90deg); }
-  .donut-center {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-  .donut-pct {
-    font-family: var(--mono);
-    font-size: 22px;
-    font-weight: 700;
-  }
-  .donut-label {
-    font-family: var(--body);
-    font-size: 9px;
-    color: var(--text-sec);
-    letter-spacing: .08em;
-  }
-  .chart-legend {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    width: 100%;
-  }
-  .legend-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-family: var(--body);
-    font-size: 12px;
-    color: var(--text-sec);
-  }
-  .legend-dot {
-    display: inline-block;
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    margin-right: 6px;
-  }
-
-  /* ─── COMBINADAS HISTORY ─── */
-  .comb-history {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 12px;
-    margin-bottom: 28px;
-  }
-  .comb-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    overflow: hidden;
-  }
-  .comb-card-header {
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--border);
-  }
-  .comb-type {
-    font-family: var(--head);
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-  }
-  .comb-type.safe   { color: var(--safe); }
-  .comb-type.inter  { color: var(--inter); }
-  .comb-type.risky  { color: var(--risky); }
-  .comb-card-body {
-    padding: 14px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .comb-row {
-    display: flex;
-    justify-content: space-between;
-    font-family: var(--body);
-    font-size: 12px;
-    color: var(--text-sec);
-  }
-  .comb-val { font-family: var(--mono); font-size: 12px; color: var(--text-pri); }
-  .comb-result {
-    margin-top: 4px;
-    padding-top: 10px;
-    border-top: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .roi-pos { font-family: var(--mono); font-size: 13px; color: var(--green); }
-  .roi-neg { font-family: var(--mono); font-size: 13px; color: var(--red); }
-
-  /* ─── PICKS TAB 2 ─── */
-  .time-block {
-    margin-bottom: 36px;
-  }
-  .time-block-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 20px;
-    padding: 14px 20px;
-    background: var(--bg-card2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-  }
-  .time-icon { font-size: 22px; }
-  .time-title {
-    font-family: var(--head);
-    font-size: 20px;
-    font-weight: 700;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-  }
-  .time-range {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text-sec);
-  }
-  .time-count {
-    margin-left: auto;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text-dim);
-  }
-  .combs-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 16px;
-  }
-  .pick-card {
-    background: var(--bg-card);
-    border-radius: 10px;
-    overflow: hidden;
-    border: 1px solid var(--border);
-    transition: border-color .2s, transform .15s;
-  }
-  .pick-card:hover {
-    border-color: var(--border-glow);
-    transform: translateY(-2px);
-  }
-  .pick-card-top {
-    padding: 14px 18px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--border);
-  }
-  .pick-type-label {
-    font-family: var(--head);
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: .14em;
-    text-transform: uppercase;
-  }
-  .pick-type-safe  .pick-type-label { color: var(--safe); }
-  .pick-type-inter .pick-type-label { color: var(--inter); }
-  .pick-type-risky .pick-type-label { color: var(--risky); }
-  .pick-card-top-right {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 2px;
-  }
-  .pick-odds-total {
-    font-family: var(--mono);
-    font-size: 20px;
-    font-weight: 700;
-  }
-  .pick-type-safe  .pick-odds-total { color: var(--safe); }
-  .pick-type-inter .pick-odds-total { color: var(--inter); }
-  .pick-type-risky .pick-odds-total { color: var(--risky); }
-  .pick-odds-label {
-    font-family: var(--body);
-    font-size: 10px;
-    color: var(--text-dim);
-    letter-spacing: .06em;
-    text-transform: uppercase;
-  }
-  .pick-selections {
-    padding: 4px 0;
-  }
-  .pick-sel {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 12px 18px;
-    border-bottom: 1px solid rgba(30,45,66,.4);
-    transition: background .15s;
-  }
-  .pick-sel:last-child { border-bottom: none; }
-  .pick-sel:hover { background: var(--bg-hover); }
-  .pick-num {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--text-dim);
-    width: 16px;
-    flex-shrink: 0;
-    margin-top: 2px;
-  }
-  .pick-sel-body { flex: 1; }
-  .pick-match {
-    font-family: var(--body);
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-pri);
-    line-height: 1.3;
-  }
-  .pick-league {
-    font-family: var(--body);
-    font-size: 10px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    margin-top: 1px;
-  }
-  .pick-market {
-    margin-top: 4px;
-    display: inline-block;
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--accent-cyan);
-    background: rgba(0,229,255,.07);
-    border: 1px solid rgba(0,229,255,.15);
-    border-radius: 3px;
-    padding: 1px 6px;
-  }
-  .pick-sel-right {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 3px;
-    flex-shrink: 0;
-  }
-  .pick-odds-ind {
-    font-family: var(--mono);
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--text-pri);
-  }
-  .pick-conf {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--text-sec);
-  }
-  .pick-ev {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--green);
-  }
-  .pick-card-footer {
-    padding: 12px 18px;
-    background: var(--bg-card2);
-    border-top: 1px solid var(--border);
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 8px;
-  }
-  .foot-item {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .foot-label {
-    font-family: var(--body);
-    font-size: 9px;
-    text-transform: uppercase;
-    letter-spacing: .1em;
-    color: var(--text-dim);
-  }
-  .foot-val {
-    font-family: var(--mono);
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text-pri);
-  }
-  .foot-val.green { color: var(--green); }
-  .foot-val.amber { color: var(--amber); }
-
-  /* conf bar */
-  .conf-bar-wrap { margin-top: 2px; }
-  .conf-bar-bg {
-    height: 3px;
-    border-radius: 2px;
-    background: var(--border);
-    overflow: hidden;
-  }
-  .conf-bar-fill {
-    height: 100%;
-    border-radius: 2px;
-    background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
-    transition: width 1s ease;
-  }
-
-  /* SUSPENDED notice */
-  .suspended-notice {
-    background: rgba(255,193,7,.05);
-    border: 1px dashed rgba(255,193,7,.2);
-    border-radius: 8px;
-    padding: 18px 20px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    color: var(--amber);
-    font-family: var(--mono);
-    font-size: 12px;
-  }
-
-  /* Omitted box */
-  .omitted-box {
-    background: rgba(255,23,68,.04);
-    border: 1px solid rgba(255,23,68,.12);
-    border-radius: 8px;
-    padding: 14px 18px;
-    margin-top: 16px;
-  }
-  .omitted-title {
-    font-family: var(--head);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: .18em;
-    text-transform: uppercase;
-    color: var(--red);
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .omitted-item {
-    display: flex;
-    gap: 8px;
-    font-family: var(--body);
-    font-size: 12px;
-    color: var(--text-sec);
-    padding: 4px 0;
-    border-bottom: 1px solid rgba(255,23,68,.06);
-  }
-  .omitted-item:last-child { border-bottom: none; }
-  .omitted-match { color: var(--text-pri); font-weight: 500; min-width: 200px; }
-  .omitted-reason { color: var(--text-dim); }
-
-  /* Bankroll widget */
-  .bankroll-bar-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 20px 24px;
-    margin-top: 32px;
-  }
-  .bkr-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 18px;
-  }
-  .bkr-title {
-    font-family: var(--head);
-    font-size: 16px;
-    font-weight: 700;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-  }
-  .bkr-total {
-    font-family: var(--mono);
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--green);
-  }
-  .bkr-rows {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .bkr-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .bkr-label {
-    font-family: var(--body);
-    font-size: 12px;
-    color: var(--text-sec);
-    width: 200px;
-    flex-shrink: 0;
-  }
-  .bkr-bar-bg {
-    flex: 1;
-    height: 8px;
-    background: var(--border);
-    border-radius: 4px;
-    overflow: hidden;
-  }
-  .bkr-bar-fill {
-    height: 100%;
-    border-radius: 4px;
-  }
-  .bkr-amount {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--text-pri);
-    width: 60px;
-    text-align: right;
-  }
-  .scenarios-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-top: 20px;
-  }
-  .scenario-card {
-    background: var(--bg-card2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px 16px;
-  }
-  .sc-title {
-    font-family: var(--head);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    margin-bottom: 8px;
-  }
-  .sc-amount {
-    font-family: var(--mono);
-    font-size: 22px;
-    font-weight: 700;
-  }
-  .sc-desc { font-family: var(--body); font-size: 11px; color: var(--text-dim); margin-top: 4px; }
-
-  /* ─── ANIMATIONS ─── */
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(16px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes pulse-border {
-    0%, 100% { border-color: var(--border); }
-    50% { border-color: var(--border-glow); }
-  }
-  .tab-panel.active > * {
-    animation: fadeUp .35s ease both;
-  }
-  .tab-panel.active > *:nth-child(2) { animation-delay: .05s; }
-  .tab-panel.active > *:nth-child(3) { animation-delay: .10s; }
-  .tab-panel.active > *:nth-child(4) { animation-delay: .15s; }
-
-  /* ─── LIVE INDICATOR ─── */
-  .live-dot {
-    display: inline-block;
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: var(--green);
-    margin-right: 6px;
-    animation: blink 1.2s ease-in-out infinite;
-  }
-  @keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: .2; }
-  }
-
-  /* responsive */
-  @media (max-width: 600px) {
-    header { flex-direction: column; align-items: flex-start; }
-    .header-meta { align-items: flex-start; }
-    .tab-btn { padding: 12px 16px; font-size: 13px; }
-    .tab-panel { padding: 20px 16px 40px; }
-    .scenarios-grid { grid-template-columns: 1fr; }
-  }
-</style>
-</head>
-<body>
-
-<!-- HEADER -->
-<header>
-  <div class="logo-block">
-    <span class="logo-tag">⚽ Sistema de Análisis Predictivo</span>
-    <div class="logo-title">FUTBET</div>
-    <div class="logo-sub">Fútbol Europeo · Capital Diario $100 USD · Objetivo +$50 USD neto</div>
-  </div>
-  <div class="header-meta">
-    <span class="hm-label">Bankroll Acumulado</span>
-    <span class="hm-bankroll">$106.00</span>
-    <span class="hm-date"><span class="live-dot"></span>Sesiones: 1 · Actualizado 21-03-2026</span>
-  </div>
-</header>
-
-<!-- TABS -->
-<div class="tabs-bar">
-  <button class="tab-btn active" onclick="switchTab('stats')">📊 Historial &amp; Aciertos</button>
-  <button class="tab-btn" onclick="switchTab('picks')">🎯 Picks de Hoy — 21 Mar 2026</button>
-</div>
-
-<!-- ══════════════════════════════════════════
-     TAB 1 · HISTORIAL & ACIERTOS
-════════════════════════════════════════════ -->
-<div class="tab-panel active" id="tab-stats">
-
-  <div class="section-title">Métricas Globales</div>
-  <div class="stat-grid">
-    <div class="stat-card">
-      <div class="stat-label">Total Picks</div>
-      <div class="stat-value val-blue">8</div>
-      <div class="stat-sub">Sesión 1 — 20/03/2026</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Aciertos</div>
-      <div class="stat-value val-green">6</div>
-      <div class="stat-sub">de 8 picks emitidos</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">% Acierto Global</div>
-      <div class="stat-value val-green">75%</div>
-      <div class="stat-sub">↑ sobre benchmark 55%</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Combinadas Ganadoras</div>
-      <div class="stat-value val-amber">1 / 3</div>
-      <div class="stat-sub">33.3% — Segura ✓</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">ROI Sesión 1</div>
-      <div class="stat-value val-green">+6.1%</div>
-      <div class="stat-sub">+$6.10 sobre $100</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Bankroll Actual</div>
-      <div class="stat-value val-green">$106</div>
-      <div class="stat-sub">+$6 vs inicio</div>
-    </div>
-  </div>
-
-  <!-- DONUT CHARTS POR MERCADO -->
-  <div class="section-title">Acierto por Mercado</div>
-  <div class="charts-row">
-    <!-- 1X2 Ganador -->
-    <div class="chart-card">
-      <div class="chart-title">1X2 — Ganador</div>
-      <div class="donut-wrap">
-        <svg width="110" height="110" viewBox="0 0 110 110">
-          <circle cx="55" cy="55" r="42" fill="none" stroke="#1e2d42" stroke-width="12"/>
-          <circle cx="55" cy="55" r="42" fill="none" stroke="#00e676" stroke-width="12"
-            stroke-dasharray="264" stroke-dashoffset="0" stroke-linecap="round"/>
-        </svg>
-        <div class="donut-center">
-          <span class="donut-pct val-green">100%</span>
-          <span class="donut-label">2a / 2t</span>
-        </div>
-      </div>
-      <div class="chart-legend">
-        <div class="legend-row"><span><span class="legend-dot" style="background:var(--green)"></span>Aciertos</span><span class="val-green" style="font-family:var(--mono);font-size:12px">2</span></div>
-        <div class="legend-row"><span><span class="legend-dot" style="background:var(--red)"></span>Fallos</span><span class="val-red" style="font-family:var(--mono);font-size:12px">0</span></div>
-      </div>
-    </div>
-    <!-- Doble Oportunidad -->
-    <div class="chart-card">
-      <div class="chart-title">Doble Oportunidad</div>
-      <div class="donut-wrap">
-        <svg width="110" height="110" viewBox="0 0 110 110">
-          <circle cx="55" cy="55" r="42" fill="none" stroke="#1e2d42" stroke-width="12"/>
-          <circle cx="55" cy="55" r="42" fill="none" stroke="#00e676" stroke-width="12"
-            stroke-dasharray="264" stroke-dashoffset="0" stroke-linecap="round"/>
-        </svg>
-        <div class="donut-center">
-          <span class="donut-pct val-green">100%</span>
-          <span class="donut-label">1a / 1t</span>
-        </div>
-      </div>
-      <div class="chart-legend">
-        <div class="legend-row"><span><span class="legend-dot" style="background:var(--green)"></span>Aciertos</span><span class="val-green" style="font-family:var(--mono);font-size:12px">1</span></div>
-        <div class="legend-row"><span><span class="legend-dot" style="background:var(--red)"></span>Fallos</span><span class="val-red" style="font-family:var(--mono);font-size:12px">0</span></div>
-      </div>
-    </div>
-    <!-- BTTS -->
-    <div class="chart-card">
-      <div class="chart-title">Ambos Anotan (BTTS)</div>
-      <div class="donut-wrap">
-        <svg width="110" height="110" viewBox="0 0 110 110">
-          <circle cx="55" cy="55" r="42" fill="none" stroke="#1e2d42" stroke-width="12"/>
-          <circle cx="55" cy="55" r="42" fill="none" stroke="#ffc400" stroke-width="12"
-            stroke-dasharray="264" stroke-dashoffset="132" stroke-linecap="round"/>
-        </svg>
-        <div class="donut-center">
-          <span class="donut-pct val-amber">50%</span>
-          <span class="donut-label">1a / 2t</span>
-        </div>
-      </div>
-      <div class="chart-legend">
-        <div class="legend-row"><span><span class="legend-dot" style="background:var(--green)"></span>Aciertos</span><span class="val-green" style="font-family:var(--mono);font-size:12px">1</span></div>
-        <div class="legend-row"><span><span class="legend-dot" style="background:var(--red)"></span>Fallos</span><span class="val-red" style="font-family:var(--mono);font-size:12px">1</span></div>
-        <div class="legend-row" style="font-size:10px;color:var(--text-dim)"><span>⚠️ Ajuste aplicado: −8% conf.</span></div>
-      </div>
-    </div>
-    <!-- Over / Under -->
-    <div class="chart-card">
-      <div class="chart-title">Over / Under Goles</div>
-      <div class="donut-wrap">
-        <svg width="110" height="110" viewBox="0 0 110 110">
-          <circle cx="55" cy="55" r="42" fill="none" stroke="#1e2d42" stroke-width="12"/>
-          <circle cx="55" cy="55" r="42" fill="none" stroke="#00e676" stroke-width="12"
-            stroke-dasharray="264" stroke-dashoffset="0" stroke-linecap="round"/>
-        </svg>
-        <div class="donut-center">
-          <span class="donut-pct val-green">100%</span>
-          <span class="donut-label">2a / 2t</span>
-        </div>
-      </div>
-      <div class="chart-legend">
-        <div class="legend-row"><span><span class="legend-dot" style="background:var(--green)"></span>Aciertos</span><span class="val-green" style="font-family:var(--mono);font-size:12px">2</span></div>
-        <div class="legend-row"><span><span class="legend-dot" style="background:var(--red)"></span>Fallos</span><span class="val-red" style="font-family:var(--mono);font-size:12px">0</span></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- TABLA DETALLADA DE PICKS -->
-  <div class="section-title">Registro Detallado de Picks — Sesión 1 (20/03/2026)</div>
-  <div class="picks-table-wrap">
-    <div class="picks-table-header">
-      <span class="pth-session">📅 Sesión #1</span>
-      <span style="font-family:var(--body);font-size:12px;color:var(--text-sec)">Viernes 20 de Marzo 2026</span>
-      <span class="pth-date">Bankroll inicial: $100.00 · Final: $106.10</span>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Partido</th>
-          <th>Liga</th>
-          <th>Mercado</th>
-          <th>Cuota</th>
-          <th>Confianza</th>
-          <th>EV</th>
-          <th>Combinada</th>
-          <th>Resultado</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="mono" style="color:var(--text-dim)">01</td>
-          <td>RC Lens vs Angers</td>
-          <td style="color:var(--text-dim);font-size:11px">Ligue 1</td>
-          <td><span class="badge" style="background:rgba(0,229,255,.08);color:var(--accent-cyan)">BTTS No</span></td>
-          <td class="mono">1.68</td>
-          <td>
-            <div style="display:flex;align-items:center;gap:8px">
-              <span class="mono" style="font-size:11px">70%</span>
-              <div class="conf-bar-bg" style="width:60px"><div class="conf-bar-fill" style="width:70%"></div></div>
-            </div>
-          </td>
-          <td class="mono val-green">+14.2%</td>
-          <td><span class="badge" style="background:rgba(0,230,118,.1);color:var(--safe)">🟢 SEGURA</span></td>
-          <td><span class="badge badge-win">✓ WIN</span></td>
-        </tr>
-        <tr>
-          <td class="mono" style="color:var(--text-dim)">02</td>
-          <td>Cagliari vs Napoli</td>
-          <td style="color:var(--text-dim);font-size:11px">Serie A</td>
-          <td><span class="badge" style="background:rgba(0,229,255,.08);color:var(--accent-cyan)">DBO X2</span></td>
-          <td class="mono">1.35</td>
-          <td>
-            <div style="display:flex;align-items:center;gap:8px">
-              <span class="mono" style="font-size:11px">80%</span>
-              <div class="conf-bar-bg" style="width:60px"><div class="conf-bar-fill" style="width:80%"></div></div>
-            </div>
-          </td>
-          <td class="mono val-dim">—</td>
-          <td><span class="badge" style="background:rgba(0,230,118,.1);color:var(--safe)">🟢 SEGURA</span></td>
-          <td><span class="badge badge-win">✓ WIN</span></td>
-        </tr>
-        <tr>
-          <td class="mono" style="color:var(--text-dim)">03</td>
-          <td>RB Leipzig vs Hoffenheim</td>
-          <td style="color:var(--text-dim);font-size:11px">Bundesliga</td>
-          <td><span class="badge" style="background:rgba(0,229,255,.08);color:var(--accent-cyan)">BTTS Sí</span></td>
-          <td class="mono">1.62</td>
-          <td>
-            <div style="display:flex;align-items:center;gap:8px">
-              <span class="mono" style="font-size:11px">73%</span>
-              <div class="conf-bar-bg" style="width:60px"><div class="conf-bar-fill" style="width:73%"></div></div>
-            </div>
-          </td>
-          <td class="mono val-green">+16.6%</td>
-          <td><span class="badge" style="background:rgba(255,196,0,.1);color:var(--inter)">🟡 INTER.</span></td>
-          <td><span class="badge badge-loss">✗ LOSS</span></td>
-        </tr>
-        <tr>
-          <td class="mono" style="color:var(--text-dim)">04</td>
-          <td>Villarreal vs Real Sociedad</td>
-          <td style="color:var(--text-dim);font-size:11px">La Liga</td>
-          <td><span class="badge" style="background:rgba(0,229,255,.08);color:var(--accent-cyan)">Over 1.5g</span></td>
-          <td class="mono">1.42</td>
-          <td>
-            <div style="display:flex;align-items:center;gap:8px">
-              <span class="mono" style="font-size:11px">74%</span>
-              <div class="conf-bar-bg" style="width:60px"><div class="conf-bar-fill" style="width:74%"></div></div>
-            </div>
-          </td>
-          <td class="mono val-green">+13.6%</td>
-          <td><span class="badge" style="background:rgba(255,196,0,.1);color:var(--inter)">🟡 INTER.</span></td>
-          <td><span class="badge badge-win">✓ WIN</span></td>
-        </tr>
-        <tr>
-          <td class="mono" style="color:var(--text-dim)">05</td>
-          <td>Bournemouth vs Man Utd</td>
-          <td style="color:var(--text-dim);font-size:11px">Premier League</td>
-          <td><span class="badge" style="background:rgba(0,229,255,.08);color:var(--accent-cyan)">Over 2.5g</span></td>
-          <td class="mono">1.52</td>
-          <td>
-            <div style="display:flex;align-items:center;gap:8px">
-              <span class="mono" style="font-size:11px">68%</span>
-              <div class="conf-bar-bg" style="width:60px"><div class="conf-bar-fill" style="width:68%"></div></div>
-            </div>
-          </td>
-          <td class="mono val-green">+4.0%</td>
-          <td><span class="badge" style="background:rgba(255,196,0,.1);color:var(--inter)">🟡 INTER.</span></td>
-          <td><span class="badge badge-win">✓ WIN</span></td>
-        </tr>
-        <tr>
-          <td class="mono" style="color:var(--text-dim)">06</td>
-          <td>Cagliari vs Napoli</td>
-          <td style="color:var(--text-dim);font-size:11px">Serie A</td>
-          <td><span class="badge" style="background:rgba(0,229,255,.08);color:var(--accent-cyan)">Napoli Win</span></td>
-          <td class="mono">1.70</td>
-          <td>
-            <div style="display:flex;align-items:center;gap:8px">
-              <span class="mono" style="font-size:11px">67%</span>
-              <div class="conf-bar-bg" style="width:60px"><div class="conf-bar-fill" style="width:67%"></div></div>
-            </div>
-          </td>
-          <td class="mono val-green">+2.0%</td>
-          <td><span class="badge" style="background:rgba(255,82,82,.1);color:var(--risky)">🔴 ARRIESG.</span></td>
-          <td><span class="badge badge-win">✓ WIN</span></td>
-        </tr>
-        <tr>
-          <td class="mono" style="color:var(--text-dim)">07</td>
-          <td>Genoa vs Udinese</td>
-          <td style="color:var(--text-dim);font-size:11px">Serie A</td>
-          <td><span class="badge" style="background:rgba(0,229,255,.08);color:var(--accent-cyan)">Genoa Win</span></td>
-          <td class="mono">2.15</td>
-          <td>
-            <div style="display:flex;align-items:center;gap:8px">
-              <span class="mono" style="font-size:11px">68%</span>
-              <div class="conf-bar-bg" style="width:60px"><div class="conf-bar-fill" style="width:68%"></div></div>
-            </div>
-          </td>
-          <td class="mono val-green">+7.5%</td>
-          <td><span class="badge" style="background:rgba(255,82,82,.1);color:var(--risky)">🔴 ARRIESG.</span></td>
-          <td><span class="badge badge-loss">✗ LOSS</span></td>
-        </tr>
-        <tr>
-          <td class="mono" style="color:var(--text-dim)">08</td>
-          <td>Hannover vs Braunschweig</td>
-          <td style="color:var(--text-dim);font-size:11px">2. Bundesliga</td>
-          <td><span class="badge" style="background:rgba(0,229,255,.08);color:var(--accent-cyan)">Hannover Win</span></td>
-          <td class="mono">1.60</td>
-          <td>
-            <div style="display:flex;align-items:center;gap:8px">
-              <span class="mono" style="font-size:11px">62%</span>
-              <div class="conf-bar-bg" style="width:60px"><div class="conf-bar-fill" style="width:62%"></div></div>
-            </div>
-          </td>
-          <td class="mono val-green">+3.0%</td>
-          <td><span class="badge" style="background:rgba(255,82,82,.1);color:var(--risky)">🔴 ARRIESG.</span></td>
-          <td><span class="badge badge-win">✓ WIN</span></td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- COMBINADAS HISTORY -->
-  <div class="section-title">Resultado de Combinadas — Sesión 1</div>
-  <div class="comb-history">
-    <div class="comb-card">
-      <div class="comb-card-header">
-        <span class="comb-type safe">🟢 Segura</span>
-        <span class="badge badge-win">✓ GANADA</span>
-      </div>
-      <div class="comb-card-body">
-        <div class="comb-row"><span>Sel. 1</span><span class="comb-val">Lens BTTS No @ 1.68</span></div>
-        <div class="comb-row"><span>Sel. 2</span><span class="comb-val">Napoli 1X @ 1.35</span></div>
-        <div class="comb-row"><span>Cuota Total</span><span class="comb-val">2.27</span></div>
-        <div class="comb-row"><span>Stake</span><span class="comb-val">$30.00</span></div>
-        <div class="comb-result">
-          <span style="font-family:var(--body);font-size:12px;color:var(--text-sec)">Retorno cobrado</span>
-          <span class="roi-pos">+$38.10 (×2.27)</span>
-        </div>
-      </div>
-    </div>
-    <div class="comb-card">
-      <div class="comb-card-header">
-        <span class="comb-type inter">🟡 Intermedia</span>
-        <span class="badge badge-loss">✗ PERDIDA</span>
-      </div>
-      <div class="comb-card-body">
-        <div class="comb-row"><span>Sel. 1</span><span class="comb-val">Leipzig BTTS Sí @ 1.62 ✗</span></div>
-        <div class="comb-row"><span>Sel. 2</span><span class="comb-val">Villarreal O1.5 @ 1.42 ✓</span></div>
-        <div class="comb-row"><span>Sel. 3</span><span class="comb-val">Bournemouth O2.5 @ 1.52 ✓</span></div>
-        <div class="comb-row"><span>Cuota Total</span><span class="comb-val">3.50</span></div>
-        <div class="comb-row"><span>Stake</span><span class="comb-val">$20.00</span></div>
-        <div class="comb-result">
-          <span style="font-family:var(--body);font-size:12px;color:var(--text-sec)">Fallo: Leipzig 5-0</span>
-          <span class="roi-neg">−$20.00</span>
-        </div>
-      </div>
-    </div>
-    <div class="comb-card">
-      <div class="comb-card-header">
-        <span class="comb-type risky">🔴 Arriesgada</span>
-        <span class="badge badge-loss">✗ PERDIDA</span>
-      </div>
-      <div class="comb-card-body">
-        <div class="comb-row"><span>Sel. 1</span><span class="comb-val">Napoli Win @ 1.70 ✓</span></div>
-        <div class="comb-row"><span>Sel. 2</span><span class="comb-val">Genoa Win @ 2.15 ✗</span></div>
-        <div class="comb-row"><span>Sel. 3</span><span class="comb-val">Hannover Win @ 1.60 ✓</span></div>
-        <div class="comb-row"><span>Cuota Total</span><span class="comb-val">5.85</span></div>
-        <div class="comb-row"><span>Stake</span><span class="comb-val">$12.00</span></div>
-        <div class="comb-result">
-          <span style="font-family:var(--body);font-size:12px;color:var(--text-sec)">Fallo: Genoa 0-2</span>
-          <span class="roi-neg">−$12.00</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-</div><!-- /tab-stats -->
-
-
-<!-- ══════════════════════════════════════════
-     TAB 2 · PICKS DE HOY — 21/03/2026
-════════════════════════════════════════════ -->
-<div class="tab-panel" id="tab-picks">
-
-  <!-- BLOQUE MAÑANA -->
-  <div class="time-block">
-    <div class="time-block-header">
-      <span class="time-icon">🌅</span>
-      <div>
-        <div class="time-title">Bloque Mañana</div>
-        <div class="time-range">00:00 – 12:59 CLT</div>
-      </div>
-      <span class="time-count">4 picks aprobados · 2 combinadas</span>
-    </div>
-
-    <div class="combs-grid">
-      <!-- SEGURA MAÑANA -->
-      <div class="pick-card pick-type-safe">
-        <div class="pick-card-top">
-          <span class="pick-type-label">🟢 Combinada Segura</span>
-          <div class="pick-card-top-right">
-            <span class="pick-odds-total">2.11</span>
-            <span class="pick-odds-label">Cuota total</span>
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-emerald-500/30">
+      
+      {/* HEADER / NAVEGACIÓN */}
+      <nav className="border-b border-slate-800 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveTab('home')}>
+            <TrendingUp className="text-emerald-500" size={28} />
+            <span className="text-xl font-black tracking-tight text-white">Pick<span className="text-emerald-500">Stats</span></span>
+          </div>
+          <div className="flex gap-1 sm:gap-4">
+            <button 
+              onClick={() => setActiveTab('picks')}
+              className={`px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'picks' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}
+            >
+              Tabla de Hoy
+            </button>
+            <button 
+              onClick={() => setActiveTab('results')}
+              className={`px-3 py-2 text-sm font-semibold rounded-lg transition-colors flex items-center gap-1 ${activeTab === 'results' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}
+            >
+              <Lock size={14} className="hidden sm:block" /> Resultados VIP
+            </button>
           </div>
         </div>
-        <div class="pick-selections">
-          <div class="pick-sel">
-            <span class="pick-num">①</span>
-            <div class="pick-sel-body">
-              <div class="pick-match">Bayern Munich vs Union Berlin</div>
-              <div class="pick-league">Bundesliga · 11:30 CLT</div>
-              <span class="pick-market">Bayern Win</span>
-            </div>
-            <div class="pick-sel-right">
-              <span class="pick-odds-ind">1.60</span>
-              <span class="pick-conf">Conf: 71%</span>
-              <span class="pick-ev">EV +8.8%</span>
-            </div>
-          </div>
-          <div class="pick-sel">
-            <span class="pick-num">②</span>
-            <div class="pick-sel-body">
-              <div class="pick-match">Fulham vs Burnley</div>
-              <div class="pick-league">Premier League · 12:00 CLT</div>
-              <span class="pick-market">DBO Fulham 1X</span>
-            </div>
-            <div class="pick-sel-right">
-              <span class="pick-odds-ind">1.32</span>
-              <span class="pick-conf">Conf: 79%</span>
-              <span class="pick-ev" style="color:var(--text-dim)">—</span>
-            </div>
-          </div>
-        </div>
-        <div class="pick-card-footer">
-          <div class="foot-item">
-            <span class="foot-label">Stake</span>
-            <span class="foot-val green">$25.00</span>
-          </div>
-          <div class="foot-item">
-            <span class="foot-label">Retorno</span>
-            <span class="foot-val">$52.75</span>
-          </div>
-          <div class="foot-item">
-            <span class="foot-label">Ganancia</span>
-            <span class="foot-val green">+$27.75</span>
-          </div>
-        </div>
-      </div>
+      </nav>
 
-      <!-- INTERMEDIA MAÑANA -->
-      <div class="pick-card pick-type-inter">
-        <div class="pick-card-top">
-          <span class="pick-type-label">🟡 Combinada Intermedia</span>
-          <div class="pick-card-top-right">
-            <span class="pick-odds-total">2.75</span>
-            <span class="pick-odds-label">Cuota total</span>
-          </div>
-        </div>
-        <div class="pick-selections">
-          <div class="pick-sel">
-            <span class="pick-num">①</span>
-            <div class="pick-sel-body">
-              <div class="pick-match">Heidenheim vs Bayer Leverkusen</div>
-              <div class="pick-league">Bundesliga · 11:30 CLT</div>
-              <span class="pick-market">Leverkusen Win</span>
+      <main className="max-w-6xl mx-auto px-4 py-8">
+        
+        {/* ==========================================
+            VISTA: INICIO (HOME)
+        ========================================== */}
+        {activeTab === 'home' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="text-center max-w-3xl mx-auto py-12 sm:py-20">
+              <h1 className="text-4xl sm:text-6xl font-black text-white leading-tight mb-6">
+                Pronósticos Deportivos <br/>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-blue-500">Basados en Datos</span>
+              </h1>
+              <p className="text-lg text-slate-400 mb-8 max-w-2xl mx-auto">
+                Estrategias divididas por riesgo: High Value, Intermedia y High Factor. Análisis diario de la Premier League, La Liga, Eredivisie, Saudi Pro League y más.
+              </p>
+              <div className="flex flex-col sm:flex-row justify-center gap-4">
+                <button 
+                  onClick={() => setActiveTab('picks')}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-8 py-3 rounded-xl transition-all shadow-lg shadow-emerald-500/20"
+                >
+                  Ver Tabla de Hoy
+                </button>
+                <button 
+                  onClick={() => setActiveTab('results')}
+                  className="bg-slate-800 hover:bg-slate-700 text-white font-bold px-8 py-3 rounded-xl transition-all border border-slate-700 flex items-center justify-center gap-2"
+                >
+                  <BarChart3 size={18} /> Estadísticas VIP
+                </button>
+              </div>
             </div>
-            <div class="pick-sel-right">
-              <span class="pick-odds-ind">1.62</span>
-              <span class="pick-conf">Conf: 68%</span>
-              <span class="pick-ev">EV +8.5%</span>
-            </div>
-          </div>
-          <div class="pick-sel">
-            <span class="pick-num">②</span>
-            <div class="pick-sel-body">
-              <div class="pick-match">Köln vs Mönchengladbach</div>
-              <div class="pick-league">Bundesliga · 11:30 CLT · Derby</div>
-              <span class="pick-market">BTTS Sí</span>
-            </div>
-            <div class="pick-sel-right">
-              <span class="pick-odds-ind">1.70</span>
-              <span class="pick-conf">Conf: 62%</span>
-              <span class="pick-ev">EV +5.4%</span>
-            </div>
-          </div>
-        </div>
-        <div class="pick-card-footer">
-          <div class="foot-item">
-            <span class="foot-label">Stake</span>
-            <span class="foot-val amber">$15.00</span>
-          </div>
-          <div class="foot-item">
-            <span class="foot-label">Retorno</span>
-            <span class="foot-val">$41.25</span>
-          </div>
-          <div class="foot-item">
-            <span class="foot-label">Ganancia</span>
-            <span class="foot-val amber">+$26.25</span>
-          </div>
-        </div>
-      </div>
 
-      <!-- ARRIESGADA MAÑANA — SUSPENDIDA -->
-      <div class="pick-card" style="border-color:rgba(255,193,7,.15)">
-        <div class="pick-card-top">
-          <span class="pick-type-label" style="color:var(--text-dim)">🔴 Combinada Arriesgada</span>
-          <span class="badge badge-pend">SUSPENDIDA</span>
-        </div>
-        <div style="padding:20px 18px">
-          <div class="suspended-notice">
-            <span style="font-size:20px">⚠️</span>
-            <span>Picks disponibles insuficientes. Los 4 calificados ya están distribuidos en SEGURA e INTERMEDIA. No quedan selecciones únicas con confianza ≥62%.</span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+              <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50">
+                <ShieldCheck className="text-emerald-500 mb-4" size={32} />
+                <h3 className="text-xl font-bold text-white mb-2">High Value</h3>
+                <p className="text-slate-400 text-sm">Bajo riesgo. Buscamos la máxima probabilidad (Ej: +1.5 goles, Doble Oportunidad). Ideal para construir Bankroll.</p>
+              </div>
+              <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50">
+                <Target className="text-blue-500 mb-4" size={32} />
+                <h3 className="text-xl font-bold text-white mb-2">Intermedia</h3>
+                <p className="text-slate-400 text-sm">Riesgo moderado con cuotas equilibradas (Ej: Córners +7.5, Goles en HT). El balance perfecto.</p>
+              </div>
+              <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50">
+                <Zap className="text-amber-500 mb-4" size={32} />
+                <h3 className="text-xl font-bold text-white mb-2">High Factor</h3>
+                <p className="text-slate-400 text-sm">Alto riesgo, alta recompensa. Combinaciones complejas (Ej: Tarjetas + Ambos Anotan) para multiplicar beneficios.</p>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        )}
+
+        {/* ==========================================
+            VISTA: TABLA DE HOY (PICKS)
+        ========================================== */}
+        {activeTab === 'picks' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 border-b border-slate-800 pb-6">
+              <div>
+                <h2 className="text-3xl font-black text-white flex items-center gap-3">
+                  <Calendar className="text-emerald-500" /> 
+                  La Tabla de Hoy
+                </h2>
+                <p className="text-slate-400 mt-2">Nuestras 2 rondas de predicciones para el {data.date}</p>
+              </div>
+              <button 
+                onClick={loadData}
+                disabled={loading}
+                className="mt-4 sm:mt-0 flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors bg-slate-800 px-4 py-2 rounded-lg"
+              >
+                <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                {loading ? "Actualizando..." : "Sincronizar Datos"}
+              </button>
+            </div>
+
+            {/* Repaso del día anterior (Estrategia) */}
+            <div className="bg-blue-900/20 border border-blue-500/20 rounded-xl p-5 mb-10 flex gap-4">
+              <div className="mt-1"><AlertCircle className="text-blue-400" /></div>
+              <div>
+                <h4 className="font-bold text-blue-100 mb-1">Repaso de Ayer</h4>
+                <p className="text-blue-200/80 text-sm leading-relaxed">{data.stats.yesterdaySummary}</p>
+              </div>
+            </div>
+
+            {/* Ronda 1 */}
+            <div className="mb-12">
+              <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <span className="bg-slate-800 text-slate-300 px-3 py-1 rounded-md text-sm font-black tracking-widest uppercase">Ronda 1</span>
+                Partidos Tempranos
+              </h3>
+              <div className="space-y-3">
+                {data.picks.ronda1.map((pick) => (
+                  <PickCard key={pick.id} pick={pick} />
+                ))}
+              </div>
+            </div>
+
+            {/* Ronda 2 */}
+            <div>
+              <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <span className="bg-slate-800 text-slate-300 px-3 py-1 rounded-md text-sm font-black tracking-widest uppercase">Ronda 2</span>
+                Partidos de Tarde/Noche
+              </h3>
+              <div className="space-y-3">
+                {data.picks.ronda2.map((pick) => (
+                  <PickCard key={pick.id} pick={pick} />
+                ))}
+              </div>
+            </div>
+            
+            <div className="mt-12 bg-slate-800/50 p-6 rounded-xl border border-slate-700 text-center">
+              <p className="text-slate-400 text-sm mb-2">Recomendación Estratégica:</p>
+              <p className="text-white font-medium">Sugerimos combinar los picks <span className="text-emerald-400 font-bold">High Value</span> de ambas rondas para asegurar el Bankroll antes de arriesgar en categorías Intermedia o High Factor.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ==========================================
+            VISTA: RESULTADOS VIP (ESTADÍSTICAS)
+        ========================================== */}
+        {activeTab === 'results' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="mb-8 border-b border-slate-800 pb-6">
+              <h2 className="text-3xl font-black text-white flex items-center gap-3">
+                <Trophy className="text-yellow-500" /> 
+                Resultados & Estadísticas VIP
+              </h2>
+              <p className="text-slate-400 mt-2">Transparencia total. Revisa nuestra efectividad mensual por estrategia.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+              {/* Stats High Value */}
+              <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 text-center relative overflow-hidden">
+                <div className="absolute -right-4 -top-4 opacity-5">
+                  <ShieldCheck size={100} />
+                </div>
+                <h4 className="text-slate-400 font-semibold mb-2">% High Value</h4>
+                <div className="flex items-end justify-center gap-1">
+                  <span className="text-5xl font-black text-emerald-400">{data.stats.monthly.highValue}</span>
+                  <span className="text-xl text-emerald-500/50 font-bold mb-1">%</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-3 uppercase tracking-wider">Efectividad Mensual</p>
+              </div>
+
+              {/* Stats Intermedia */}
+              <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 text-center relative overflow-hidden">
+                <div className="absolute -right-4 -top-4 opacity-5">
+                  <Target size={100} />
+                </div>
+                <h4 className="text-slate-400 font-semibold mb-2">% Intermedia</h4>
+                <div className="flex items-end justify-center gap-1">
+                  <span className="text-5xl font-black text-blue-400">{data.stats.monthly.intermedia}</span>
+                  <span className="text-xl text-blue-500/50 font-bold mb-1">%</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-3 uppercase tracking-wider">Efectividad Mensual</p>
+              </div>
+
+              {/* Stats High Factor */}
+              <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 text-center relative overflow-hidden">
+                <div className="absolute -right-4 -top-4 opacity-5">
+                  <Zap size={100} />
+                </div>
+                <h4 className="text-slate-400 font-semibold mb-2">% High Factor</h4>
+                <div className="flex items-end justify-center gap-1">
+                  <span className="text-5xl font-black text-amber-400">{data.stats.monthly.highFactor}</span>
+                  <span className="text-xl text-amber-500/50 font-bold mb-1">%</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-3 uppercase tracking-wider">Efectividad Mensual</p>
+              </div>
+            </div>
+
+            {/* Muro para potenciales clientes VIP */}
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-emerald-500/20 rounded-2xl p-8 text-center shadow-2xl">
+              <Lock className="mx-auto text-emerald-500 mb-4" size={40} />
+              <h3 className="text-2xl font-bold text-white mb-3">Acceso al Historial Completo</h3>
+              <p className="text-slate-400 max-w-2xl mx-auto mb-6">
+                Los usuarios gratuitos pueden ver los resultados consolidados. Únete al canal VIP para acceder al desglose partido a partido, análisis profundo de por qué falló o acertó una predicción y gestión de bankroll personalizada.
+              </p>
+              <button className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-8 py-3 rounded-xl transition-all shadow-lg shadow-emerald-500/20">
+                Únete al VIP Ahora
+              </button>
+            </div>
+          </div>
+        )}
+
+      </main>
     </div>
-
-    <!-- Omitidos Mañana -->
-    <div class="omitted-box">
-      <div class="omitted-title">⛔ Partidos omitidos — Bloque Mañana</div>
-      <div class="omitted-item"><span class="omitted-match">Brighton vs Liverpool</span><span class="omitted-reason">Salah dudoso (lesión UCL). EV negativo en todos los mercados limpios.</span></div>
-      <div class="omitted-item"><span class="omitted-match">Wolfsburg vs Werder Bremen</span><span class="omitted-reason">BTTS Sí EV −0.2%. Ambos equipos inconsistentes.</span></div>
-      <div class="omitted-item"><span class="omitted-match">Parma vs Cremonese</span><span class="omitted-reason">Datos insuficientes, confianza &lt;60%. Serie B periférica.</span></div>
-      <div class="omitted-item"><span class="omitted-match">Elche / Osasuna / Espanyol (La Liga)</span><span class="omitted-reason">Sin datos estadísticos completos verificados en fuentes primarias.</span></div>
-    </div>
-  </div>
-
-  <!-- BLOQUE TARDE -->
-  <div class="time-block">
-    <div class="time-block-header">
-      <span class="time-icon">☀️</span>
-      <div>
-        <div class="time-title">Bloque Tarde</div>
-        <div class="time-range">13:00 – 18:59 CLT</div>
-      </div>
-      <span class="time-count">6 picks aprobados · 3 combinadas</span>
-    </div>
-
-    <div class="combs-grid">
-      <!-- SEGURA TARDE -->
-      <div class="pick-card pick-type-safe">
-        <div class="pick-card-top">
-          <span class="pick-type-label">🟢 Combinada Segura</span>
-          <div class="pick-card-top-right">
-            <span class="pick-odds-total">2.67</span>
-            <span class="pick-odds-label">Cuota total</span>
-          </div>
-        </div>
-        <div class="pick-selections">
-          <div class="pick-sel">
-            <span class="pick-num">①</span>
-            <div class="pick-sel-body">
-              <div class="pick-match">Borussia Dortmund vs Hamburg</div>
-              <div class="pick-league">Bundesliga · 14:30 CLT</div>
-              <span class="pick-market">BVB Win</span>
-            </div>
-            <div class="pick-sel-right">
-              <span class="pick-odds-ind">1.55</span>
-              <span class="pick-conf">Conf: 73%</span>
-              <span class="pick-ev">EV +11.6%</span>
-            </div>
-          </div>
-          <div class="pick-sel">
-            <span class="pick-num">②</span>
-            <div class="pick-sel-body">
-              <div class="pick-match">Juventus vs Sassuolo</div>
-              <div class="pick-league">Serie A · 16:45 CLT</div>
-              <span class="pick-market">Over 2.5 Goles</span>
-            </div>
-            <div class="pick-sel-right">
-              <span class="pick-odds-ind">1.72</span>
-              <span class="pick-conf">Conf: 75%</span>
-              <span class="pick-ev">EV +29%</span>
-            </div>
-          </div>
-        </div>
-        <div class="pick-card-footer">
-          <div class="foot-item">
-            <span class="foot-label">Stake</span>
-            <span class="foot-val green">$25.00</span>
-          </div>
-          <div class="foot-item">
-            <span class="foot-label">Retorno</span>
-            <span class="foot-val">$66.75</span>
-          </div>
-          <div class="foot-item">
-            <span class="foot-label">Ganancia</span>
-            <span class="foot-val green">+$41.75</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- INTERMEDIA TARDE -->
-      <div class="pick-card pick-type-inter">
-        <div class="pick-card-top">
-          <span class="pick-type-label">🟡 Combinada Intermedia</span>
-          <div class="pick-card-top-right">
-            <span class="pick-odds-total">3.18</span>
-            <span class="pick-odds-label">Cuota total</span>
-          </div>
-        </div>
-        <div class="pick-selections">
-          <div class="pick-sel">
-            <span class="pick-num">①</span>
-            <div class="pick-sel-body">
-              <div class="pick-match">Toulouse vs Lorient</div>
-              <div class="pick-league">Ligue 1 · 13:00 CLT</div>
-              <span class="pick-market">BTTS Sí</span>
-            </div>
-            <div class="pick-sel-right">
-              <span class="pick-odds-ind">1.72</span>
-              <span class="pick-conf">Conf: 68%</span>
-              <span class="pick-ev">EV +17%</span>
-            </div>
-          </div>
-          <div class="pick-sel">
-            <span class="pick-num">②</span>
-            <div class="pick-sel-body">
-              <div class="pick-match">Milan vs Torino</div>
-              <div class="pick-league">Serie A · 15:00 CLT</div>
-              <span class="pick-market">Over 2.5 Goles</span>
-            </div>
-            <div class="pick-sel-right">
-              <span class="pick-odds-ind">1.85</span>
-              <span class="pick-conf">Conf: 64%</span>
-              <span class="pick-ev">EV +11%</span>
-            </div>
-          </div>
-        </div>
-        <div class="pick-card-footer">
-          <div class="foot-item">
-            <span class="foot-label">Stake</span>
-            <span class="foot-val amber">$15.00</span>
-          </div>
-          <div class="foot-item">
-            <span class="foot-label">Retorno</span>
-            <span class="foot-val">$47.70</span>
-          </div>
-          <div class="foot-item">
-            <span class="foot-label">Ganancia</span>
-            <span class="foot-val amber">+$32.70</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- ARRIESGADA TARDE -->
-      <div class="pick-card pick-type-risky">
-        <div class="pick-card-top">
-          <span class="pick-type-label">🔴 Combinada Arriesgada</span>
-          <div class="pick-card-top-right">
-            <span class="pick-odds-total">4.47</span>
-            <span class="pick-odds-label">Cuota total</span>
-          </div>
-        </div>
-        <div class="pick-selections">
-          <div class="pick-sel">
-            <span class="pick-num">①</span>
-            <div class="pick-sel-body">
-              <div class="pick-match">Everton vs Chelsea</div>
-              <div class="pick-league">Premier League · 14:30 CLT</div>
-              <span class="pick-market">Chelsea Win</span>
-            </div>
-            <div class="pick-sel-right">
-              <span class="pick-odds-ind">2.08</span>
-              <span class="pick-conf">Conf: 68%</span>
-              <span class="pick-ev">EV +18.6%</span>
-            </div>
-          </div>
-          <div class="pick-sel">
-            <span class="pick-num">②</span>
-            <div class="pick-sel-body">
-              <div class="pick-match">Leeds United vs Brentford</div>
-              <div class="pick-league">Premier League · 17:00 CLT</div>
-              <span class="pick-market">Brentford Win</span>
-            </div>
-            <div class="pick-sel-right">
-              <span class="pick-odds-ind">2.15</span>
-              <span class="pick-conf">Conf: 62%</span>
-              <span class="pick-ev">EV +11.8%</span>
-            </div>
-          </div>
-        </div>
-        <div class="pick-card-footer">
-          <div class="foot-item">
-            <span class="foot-label">Stake</span>
-            <span class="foot-val" style="color:var(--risky)">$10.00</span>
-          </div>
-          <div class="foot-item">
-            <span class="foot-label">Retorno</span>
-            <span class="foot-val">$44.70</span>
-          </div>
-          <div class="foot-item">
-            <span class="foot-label">Ganancia</span>
-            <span class="foot-val" style="color:var(--risky)">+$34.70</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Omitidos Tarde -->
-    <div class="omitted-box">
-      <div class="omitted-title">⛔ Partidos omitidos — Bloque Tarde</div>
-      <div class="omitted-item"><span class="omitted-match">Nice vs PSG</span><span class="omitted-reason">PSG Win @ 1.36 — EV negativo −12.9%. Cuota por debajo del mínimo.</span></div>
-      <div class="omitted-item"><span class="omitted-match">Auxerre vs Brest</span><span class="omitted-reason">Confianza insuficiente &lt;62%. Datos incompletos en Auxerre.</span></div>
-      <div class="omitted-item"><span class="omitted-match">Sevilla vs Valencia</span><span class="omitted-reason">Sin cuotas ni xG verificados en tiempo real. Excluido.</span></div>
-    </div>
-  </div>
-
-  <!-- BLOQUE NOCHE -->
-  <div class="time-block">
-    <div class="time-block-header">
-      <span class="time-icon">🌙</span>
-      <div>
-        <div class="time-title">Bloque Noche</div>
-        <div class="time-range">19:00 – 23:59 CLT</div>
-      </div>
-      <span class="time-count" style="color:var(--red)">Sin partidos calificados</span>
-    </div>
-    <div class="suspended-notice">
-      <span style="font-size:20px">🌙</span>
-      <span>No se detectaron partidos de ligas europeas profesionales calificadas en el bloque nocturno del 21/03/2026. No se emiten combinadas para este bloque.</span>
-    </div>
-  </div>
-
-  <!-- BANKROLL -->
-  <div class="bankroll-bar-card">
-    <div class="bkr-header">
-      <span class="bkr-title">💼 Distribución de Bankroll — $100 USD</span>
-      <span class="bkr-total">$100.00</span>
-    </div>
-    <div class="bkr-rows">
-      <div class="bkr-row">
-        <span class="bkr-label">🟢 Segura Mañana</span>
-        <div class="bkr-bar-bg"><div class="bkr-bar-fill" style="width:25%;background:var(--green)"></div></div>
-        <span class="bkr-amount">$25.00</span>
-      </div>
-      <div class="bkr-row">
-        <span class="bkr-label">🟡 Intermedia Mañana</span>
-        <div class="bkr-bar-bg"><div class="bkr-bar-fill" style="width:15%;background:var(--amber)"></div></div>
-        <span class="bkr-amount">$15.00</span>
-      </div>
-      <div class="bkr-row">
-        <span class="bkr-label">🟢 Segura Tarde</span>
-        <div class="bkr-bar-bg"><div class="bkr-bar-fill" style="width:25%;background:var(--green)"></div></div>
-        <span class="bkr-amount">$25.00</span>
-      </div>
-      <div class="bkr-row">
-        <span class="bkr-label">🟡 Intermedia Tarde</span>
-        <div class="bkr-bar-bg"><div class="bkr-bar-fill" style="width:15%;background:var(--amber)"></div></div>
-        <span class="bkr-amount">$15.00</span>
-      </div>
-      <div class="bkr-row">
-        <span class="bkr-label">🔴 Arriesgada Tarde</span>
-        <div class="bkr-bar-bg"><div class="bkr-bar-fill" style="width:10%;background:var(--risky)"></div></div>
-        <span class="bkr-amount">$10.00</span>
-      </div>
-      <div class="bkr-row">
-        <span class="bkr-label" style="color:var(--text-dim)">💰 Reserva</span>
-        <div class="bkr-bar-bg"><div class="bkr-bar-fill" style="width:10%;background:var(--text-dim)"></div></div>
-        <span class="bkr-amount" style="color:var(--text-dim)">$10.00</span>
-      </div>
-    </div>
-
-    <div class="scenarios-grid" style="margin-top:24px">
-      <div class="scenario-card">
-        <div class="sc-title">🟢 Escenario Conservador</div>
-        <div class="sc-amount val-green">+$29.50</div>
-        <div class="sc-desc">Solo ambas Seguras aciertan</div>
-      </div>
-      <div class="scenario-card">
-        <div class="sc-title">🟡 Escenario Base</div>
-        <div class="sc-amount val-amber">+$77.20</div>
-        <div class="sc-desc">Seguras + Intermedia Tarde</div>
-      </div>
-      <div class="scenario-card">
-        <div class="sc-title">🔴 Escenario Óptimo</div>
-        <div class="sc-amount" style="color:var(--accent-cyan)">+$163.15</div>
-        <div class="sc-desc">Las 5 combinadas aciertan</div>
-      </div>
-    </div>
-  </div>
-
-</div><!-- /tab-picks -->
-
-<script>
-  function switchTab(name) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    document.getElementById('tab-' + name).classList.add('active');
-    event.currentTarget.classList.add('active');
-  }
-
-  // Animate donut charts on load
-  document.addEventListener('DOMContentLoaded', () => {
-    const circles = document.querySelectorAll('.donut-wrap circle:last-child');
-    circles.forEach(c => {
-      const final = c.style.strokeDashoffset || '0';
-      c.style.strokeDashoffset = '264';
-      c.style.transition = 'stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)';
-      setTimeout(() => { c.style.strokeDashoffset = final; }, 300);
-    });
-
-    // Animate confidence bars
-    const fills = document.querySelectorAll('.conf-bar-fill');
-    fills.forEach(f => {
-      const w = f.style.width;
-      f.style.width = '0';
-      f.style.transition = 'width .9s ease';
-      setTimeout(() => { f.style.width = w; }, 400);
-    });
-
-    // Animate bankroll bars
-    const bkrFills = document.querySelectorAll('.bkr-bar-fill');
-    bkrFills.forEach(f => {
-      const w = f.style.width;
-      f.style.width = '0';
-      f.style.transition = 'width 1.1s cubic-bezier(.4,0,.2,1)';
-      setTimeout(() => { f.style.width = w; }, 500);
-    });
-  });
-</script>
-</body>
-</html>
+  );
+}
