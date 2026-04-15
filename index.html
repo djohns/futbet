@@ -1,347 +1,1051 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  TrendingUp, 
-  CheckCircle, 
-  Calendar, 
-  Lock, 
-  ShieldCheck, 
-  Zap, 
-  Target, 
-  BarChart3, 
-  RefreshCw,
-  Trophy,
-  AlertCircle
-} from 'lucide-react';
-
-// ==========================================
-// 📊 CONFIGURACIÓN DE GOOGLE SHEETS
-// ==========================================
-// Para conectar esto a tu Google Sheet real:
-// 1. Ve a tu Google Sheet -> Archivo -> Compartir -> Publicar en la web.
-// 2. Selecciona "Todo el documento" o la hoja específica y elige "Valores separados por comas (.csv)".
-// 3. Pega ese enlace aquí abajo.
-const GOOGLE_SHEETS_CSV_URL = ""; 
-
-// ==========================================
-// 🗄️ DATOS DE PRUEBA (MOCK DATA)
-// ==========================================
-// Estos datos simulan lo que vendría de tu Google Sheet.
-// Incluye tu estrategia de 2 Rondas y 3 Categorías de Riesgo.
-const MOCK_DATA = {
-  date: "25 de Marzo, 2026",
-  picks: {
-    ronda1: [
-      { id: 1, match: "PSV vs Ajax", league: "Eredivisie", prediction: "+1.5 Goles Totales", category: "High Value", prob: "88%", odds: "1.25" },
-      { id: 2, match: "Al Nassr vs Al Hilal", league: "Saudi Pro League", prediction: "Ambos Anotan (Sí)", category: "Intermedia", prob: "72%", odds: "1.65" },
-      { id: 3, match: "Feyenoord vs AZ", league: "Eredivisie", prediction: "Local + Gol en HT", category: "High Factor", prob: "55%", odds: "2.30" },
-    ],
-    ronda2: [
-      { id: 4, match: "Arsenal vs Chelsea", league: "Premier League", prediction: "1X (Doble Oportunidad)", category: "High Value", prob: "82%", odds: "1.30" },
-      { id: 5, match: "Bayern Munich vs B. Dortmund", league: "Bundesliga", prediction: "+7.5 Córners", category: "Intermedia", prob: "75%", odds: "1.55" },
-      { id: 6, match: "Real Madrid vs Barcelona", league: "La Liga", prediction: "+2.5 Tarjetas + Ambos Anotan", category: "High Factor", prob: "48%", odds: "2.85" },
-    ]
-  },
-  stats: {
-    yesterdaySummary: "Ayer cerramos con un balance muy positivo: 4/6 aciertos en la Tabla General. ¡La estrategia High Value volvió a ser un éxito rotundo con 2/2 verdes!",
-    monthly: {
-      highValue: 85,
-      intermedia: 68,
-      highFactor: 42
-    },
-    totalProfitUnits: "+14.5"
-  }
-};
-
-export default function App() {
-  const [activeTab, setActiveTab] = useState('home');
-  const [data, setData] = useState(MOCK_DATA);
-  const [loading, setLoading] = useState(false);
-
-  // Función para simular la carga desde Google Sheets
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      if (GOOGLE_SHEETS_CSV_URL) {
-        // Lógica real para procesar el CSV
-        // const response = await fetch(GOOGLE_SHEETS_CSV_URL);
-        // const csvText = await response.text();
-        // Aquí iría una función para convertir el texto CSV a un objeto JSON (ej. usando PapaParse o split('\n'))
-        console.log("Cargando desde Google Sheets...");
-      } else {
-        // Usamos los datos de prueba si no hay URL
-        setTimeout(() => {
-          setData(MOCK_DATA);
-          setLoading(false);
-        }, 800);
-      }
-    } catch (error) {
-      console.error("Error cargando datos:", error);
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  // Componente de Tarjeta para Pronósticos
-  const PickCard = ({ pick }) => {
-    // Asignar colores e íconos según tu categoría de riesgo
-    let catColors = "";
-    let Icon = ShieldCheck;
-
-    if (pick.category === "High Value") {
-      catColors = "bg-emerald-500/10 border-emerald-500/30 text-emerald-400";
-      Icon = ShieldCheck;
-    } else if (pick.category === "Intermedia") {
-      catColors = "bg-blue-500/10 border-blue-500/30 text-blue-400";
-      Icon = Target;
-    } else if (pick.category === "High Factor") {
-      catColors = "bg-amber-500/10 border-amber-500/30 text-amber-400";
-      Icon = Zap;
-    }
-
-    return (
-      <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all hover:bg-slate-750">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">{pick.league}</span>
-            <span className={`text-[10px] px-2 py-0.5 rounded-full border flex items-center gap-1 ${catColors}`}>
-              <Icon size={10} />
-              {pick.category}
-            </span>
-          </div>
-          <h3 className="font-bold text-lg text-white">{pick.match}</h3>
-          <p className="text-slate-300 font-medium mt-1">Pick: {pick.prediction}</p>
-        </div>
-        
-        <div className="flex flex-row md:flex-col gap-4 md:gap-1 items-center md:items-end w-full md:w-auto bg-slate-900 md:bg-transparent p-3 md:p-0 rounded-lg">
-          <div className="text-center md:text-right flex-1 md:flex-none">
-            <p className="text-xs text-slate-400">Probabilidad</p>
-            <p className="text-lg font-bold text-white">{pick.prob}</p>
-          </div>
-          <div className="w-px h-8 bg-slate-700 md:hidden block"></div>
-          <div className="text-center md:text-right flex-1 md:flex-none">
-            <p className="text-xs text-slate-400">Cuota</p>
-            <p className="text-lg font-bold text-emerald-400">{pick.odds}</p>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-emerald-500/30">
-      
-      {/* HEADER / NAVEGACIÓN */}
-      <nav className="border-b border-slate-800 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveTab('home')}>
-            <TrendingUp className="text-emerald-500" size={28} />
-            <span className="text-xl font-black tracking-tight text-white">Pick<span className="text-emerald-500">Stats</span></span>
-          </div>
-          <div className="flex gap-1 sm:gap-4">
-            <button 
-              onClick={() => setActiveTab('picks')}
-              className={`px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'picks' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}
-            >
-              Tabla de Hoy
-            </button>
-            <button 
-              onClick={() => setActiveTab('results')}
-              className={`px-3 py-2 text-sm font-semibold rounded-lg transition-colors flex items-center gap-1 ${activeTab === 'results' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}
-            >
-              <Lock size={14} className="hidden sm:block" /> Resultados VIP
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        
-        {/* ==========================================
-            VISTA: INICIO (HOME)
-        ========================================== */}
-        {activeTab === 'home' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="text-center max-w-3xl mx-auto py-12 sm:py-20">
-              <h1 className="text-4xl sm:text-6xl font-black text-white leading-tight mb-6">
-                Pronósticos Deportivos <br/>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-blue-500">Basados en Datos</span>
-              </h1>
-              <p className="text-lg text-slate-400 mb-8 max-w-2xl mx-auto">
-                Estrategias divididas por riesgo: High Value, Intermedia y High Factor. Análisis diario de la Premier League, La Liga, Eredivisie, Saudi Pro League y más.
-              </p>
-              <div className="flex flex-col sm:flex-row justify-center gap-4">
-                <button 
-                  onClick={() => setActiveTab('picks')}
-                  className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-8 py-3 rounded-xl transition-all shadow-lg shadow-emerald-500/20"
-                >
-                  Ver Tabla de Hoy
-                </button>
-                <button 
-                  onClick={() => setActiveTab('results')}
-                  className="bg-slate-800 hover:bg-slate-700 text-white font-bold px-8 py-3 rounded-xl transition-all border border-slate-700 flex items-center justify-center gap-2"
-                >
-                  <BarChart3 size={18} /> Estadísticas VIP
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
-              <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50">
-                <ShieldCheck className="text-emerald-500 mb-4" size={32} />
-                <h3 className="text-xl font-bold text-white mb-2">High Value</h3>
-                <p className="text-slate-400 text-sm">Bajo riesgo. Buscamos la máxima probabilidad (Ej: +1.5 goles, Doble Oportunidad). Ideal para construir Bankroll.</p>
-              </div>
-              <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50">
-                <Target className="text-blue-500 mb-4" size={32} />
-                <h3 className="text-xl font-bold text-white mb-2">Intermedia</h3>
-                <p className="text-slate-400 text-sm">Riesgo moderado con cuotas equilibradas (Ej: Córners +7.5, Goles en HT). El balance perfecto.</p>
-              </div>
-              <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50">
-                <Zap className="text-amber-500 mb-4" size={32} />
-                <h3 className="text-xl font-bold text-white mb-2">High Factor</h3>
-                <p className="text-slate-400 text-sm">Alto riesgo, alta recompensa. Combinaciones complejas (Ej: Tarjetas + Ambos Anotan) para multiplicar beneficios.</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ==========================================
-            VISTA: TABLA DE HOY (PICKS)
-        ========================================== */}
-        {activeTab === 'picks' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 border-b border-slate-800 pb-6">
-              <div>
-                <h2 className="text-3xl font-black text-white flex items-center gap-3">
-                  <Calendar className="text-emerald-500" /> 
-                  La Tabla de Hoy
-                </h2>
-                <p className="text-slate-400 mt-2">Nuestras 2 rondas de predicciones para el {data.date}</p>
-              </div>
-              <button 
-                onClick={loadData}
-                disabled={loading}
-                className="mt-4 sm:mt-0 flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors bg-slate-800 px-4 py-2 rounded-lg"
-              >
-                <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-                {loading ? "Actualizando..." : "Sincronizar Datos"}
-              </button>
-            </div>
-
-            {/* Repaso del día anterior (Estrategia) */}
-            <div className="bg-blue-900/20 border border-blue-500/20 rounded-xl p-5 mb-10 flex gap-4">
-              <div className="mt-1"><AlertCircle className="text-blue-400" /></div>
-              <div>
-                <h4 className="font-bold text-blue-100 mb-1">Repaso de Ayer</h4>
-                <p className="text-blue-200/80 text-sm leading-relaxed">{data.stats.yesterdaySummary}</p>
-              </div>
-            </div>
-
-            {/* Ronda 1 */}
-            <div className="mb-12">
-              <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                <span className="bg-slate-800 text-slate-300 px-3 py-1 rounded-md text-sm font-black tracking-widest uppercase">Ronda 1</span>
-                Partidos Tempranos
-              </h3>
-              <div className="space-y-3">
-                {data.picks.ronda1.map((pick) => (
-                  <PickCard key={pick.id} pick={pick} />
-                ))}
-              </div>
-            </div>
-
-            {/* Ronda 2 */}
-            <div>
-              <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                <span className="bg-slate-800 text-slate-300 px-3 py-1 rounded-md text-sm font-black tracking-widest uppercase">Ronda 2</span>
-                Partidos de Tarde/Noche
-              </h3>
-              <div className="space-y-3">
-                {data.picks.ronda2.map((pick) => (
-                  <PickCard key={pick.id} pick={pick} />
-                ))}
-              </div>
-            </div>
-            
-            <div className="mt-12 bg-slate-800/50 p-6 rounded-xl border border-slate-700 text-center">
-              <p className="text-slate-400 text-sm mb-2">Recomendación Estratégica:</p>
-              <p className="text-white font-medium">Sugerimos combinar los picks <span className="text-emerald-400 font-bold">High Value</span> de ambas rondas para asegurar el Bankroll antes de arriesgar en categorías Intermedia o High Factor.</p>
-            </div>
-          </div>
-        )}
-
-        {/* ==========================================
-            VISTA: RESULTADOS VIP (ESTADÍSTICAS)
-        ========================================== */}
-        {activeTab === 'results' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="mb-8 border-b border-slate-800 pb-6">
-              <h2 className="text-3xl font-black text-white flex items-center gap-3">
-                <Trophy className="text-yellow-500" /> 
-                Resultados & Estadísticas VIP
-              </h2>
-              <p className="text-slate-400 mt-2">Transparencia total. Revisa nuestra efectividad mensual por estrategia.</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-              {/* Stats High Value */}
-              <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 text-center relative overflow-hidden">
-                <div className="absolute -right-4 -top-4 opacity-5">
-                  <ShieldCheck size={100} />
-                </div>
-                <h4 className="text-slate-400 font-semibold mb-2">% High Value</h4>
-                <div className="flex items-end justify-center gap-1">
-                  <span className="text-5xl font-black text-emerald-400">{data.stats.monthly.highValue}</span>
-                  <span className="text-xl text-emerald-500/50 font-bold mb-1">%</span>
-                </div>
-                <p className="text-xs text-slate-500 mt-3 uppercase tracking-wider">Efectividad Mensual</p>
-              </div>
-
-              {/* Stats Intermedia */}
-              <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 text-center relative overflow-hidden">
-                <div className="absolute -right-4 -top-4 opacity-5">
-                  <Target size={100} />
-                </div>
-                <h4 className="text-slate-400 font-semibold mb-2">% Intermedia</h4>
-                <div className="flex items-end justify-center gap-1">
-                  <span className="text-5xl font-black text-blue-400">{data.stats.monthly.intermedia}</span>
-                  <span className="text-xl text-blue-500/50 font-bold mb-1">%</span>
-                </div>
-                <p className="text-xs text-slate-500 mt-3 uppercase tracking-wider">Efectividad Mensual</p>
-              </div>
-
-              {/* Stats High Factor */}
-              <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 text-center relative overflow-hidden">
-                <div className="absolute -right-4 -top-4 opacity-5">
-                  <Zap size={100} />
-                </div>
-                <h4 className="text-slate-400 font-semibold mb-2">% High Factor</h4>
-                <div className="flex items-end justify-center gap-1">
-                  <span className="text-5xl font-black text-amber-400">{data.stats.monthly.highFactor}</span>
-                  <span className="text-xl text-amber-500/50 font-bold mb-1">%</span>
-                </div>
-                <p className="text-xs text-slate-500 mt-3 uppercase tracking-wider">Efectividad Mensual</p>
-              </div>
-            </div>
-
-            {/* Muro para potenciales clientes VIP */}
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-emerald-500/20 rounded-2xl p-8 text-center shadow-2xl">
-              <Lock className="mx-auto text-emerald-500 mb-4" size={40} />
-              <h3 className="text-2xl font-bold text-white mb-3">Acceso al Historial Completo</h3>
-              <p className="text-slate-400 max-w-2xl mx-auto mb-6">
-                Los usuarios gratuitos pueden ver los resultados consolidados. Únete al canal VIP para acceder al desglose partido a partido, análisis profundo de por qué falló o acertó una predicción y gestión de bankroll personalizada.
-              </p>
-              <button className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-8 py-3 rounded-xl transition-all shadow-lg shadow-emerald-500/20">
-                Únete al VIP Ahora
-              </button>
-            </div>
-          </div>
-        )}
-
-      </main>
-    </div>
-  );
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BETSCAN // Football Intelligence Terminal</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #060b11;
+  --s1: #0b1220;
+  --s2: #0f1829;
+  --s3: #141f33;
+  --bd: #1a2d47;
+  --bd2: #234060;
+  --bd3: #2d5280;
+  --cyan: #00d4ff;
+  --cyan2: rgba(0,212,255,0.12);
+  --cyan3: rgba(0,212,255,0.06);
+  --green: #00e676;
+  --green2: rgba(0,230,118,0.12);
+  --amber: #ffb700;
+  --amber2: rgba(255,183,0,0.12);
+  --red: #ff4d4d;
+  --red2: rgba(255,77,77,0.12);
+  --t1: #c8d8e8;
+  --t2: #6a8aaa;
+  --t3: #3a5570;
+  --font: 'JetBrains Mono', monospace;
 }
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:13px;min-height:100vh;overflow-x:hidden}
+
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.07) 3px,rgba(0,0,0,0.07) 4px);pointer-events:none;z-index:9999}
+
+/* ── HEADER ── */
+.hdr{position:sticky;top:0;z-index:200;background:var(--s1);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:50px;gap:16px}
+.logo{font-size:17px;font-weight:700;color:var(--cyan);letter-spacing:.22em;white-space:nowrap;text-shadow:0 0 24px rgba(0,212,255,.35)}
+.logo em{color:var(--t3);font-style:normal;font-weight:300}
+.hdr-meta{display:flex;gap:20px;align-items:center;font-size:10px;color:var(--t3);flex-wrap:wrap}
+.hdr-date{color:var(--t2)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;margin-right:5px;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.req-used{color:var(--t3)}
+.btn-reload{background:transparent;border:1px solid var(--bd2);color:var(--t2);font-family:var(--font);font-size:10px;padding:4px 12px;border-radius:3px;cursor:pointer;letter-spacing:.08em;transition:.15s}
+.btn-reload:hover{border-color:var(--cyan);color:var(--cyan)}
+
+/* ── UPLOAD SCREEN ── */
+#uploadScreen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 50px);gap:28px;padding:40px 20px}
+.up-ascii{font-size:10px;color:var(--t3);line-height:1.4;text-align:center;letter-spacing:.05em}
+.up-zone{width:100%;max-width:520px;border:2px dashed var(--bd2);border-radius:6px;padding:52px 40px;text-align:center;cursor:pointer;position:relative;background:var(--s1);transition:.2s}
+.up-zone:hover,.up-zone.over{border-color:var(--cyan);background:var(--cyan3);box-shadow:0 0 32px rgba(0,212,255,.06)}
+.up-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.up-icon{display:block;font-size:40px;margin-bottom:14px;color:var(--bd3)}
+.up-title{font-size:15px;color:var(--t1);margin-bottom:6px;font-weight:500}
+.up-sub{font-size:11px;color:var(--t3);line-height:1.7}
+.up-sub b{color:var(--cyan)}
+.up-hint{font-size:10px;color:var(--t3);text-align:center;max-width:520px;line-height:1.9}
+.up-hint span{color:var(--t2)}
+.btn-demo{background:transparent;border:1px solid var(--bd2);color:var(--t3);font-family:var(--font);font-size:10px;padding:6px 18px;border-radius:3px;cursor:pointer;letter-spacing:.1em;transition:.15s;text-transform:uppercase}
+.btn-demo:hover{border-color:var(--amber);color:var(--amber)}
+
+/* ── DASHBOARD ── */
+#dashboard{display:none}
+
+/* Stats bar */
+.stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1px;background:var(--bd);border-bottom:1px solid var(--bd)}
+.sc{background:var(--s1);padding:14px 18px}
+.sc-lbl{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.14em;margin-bottom:5px}
+.sc-val{font-size:20px;font-weight:700}
+.sc-val.cy{color:var(--cyan)} .sc-val.gn{color:var(--green)} .sc-val.am{color:var(--amber)} .sc-val.rd{color:var(--red)}
+.sc-sub{font-size:9px;color:var(--t3);margin-top:3px}
+
+/* Filters */
+.filters{position:sticky;top:50px;z-index:190;background:var(--s2);border-bottom:1px solid var(--bd);padding:10px 20px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.fl{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.12em;white-space:nowrap}
+select{background:var(--bg);border:1px solid var(--bd);color:var(--t1);font-family:var(--font);font-size:10px;padding:4px 6px;border-radius:3px;outline:none;cursor:pointer}
+select:focus{border-color:var(--cyan)}
+.filter-grp{display:flex;align-items:center;gap:6px}
+input[type=range]{width:90px;accent-color:var(--cyan);cursor:pointer}
+.range-val{font-size:10px;color:var(--amber);min-width:28px}
+.sep{width:1px;height:20px;background:var(--bd);margin:0 4px}
+.f-actions{display:flex;gap:8px;margin-left:auto}
+.btn-tsv,.btn-reset{background:transparent;border:1px solid;font-family:var(--font);font-size:10px;padding:4px 14px;border-radius:3px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;transition:.15s}
+.btn-tsv{border-color:var(--cyan);color:var(--cyan)}
+.btn-tsv:hover{background:var(--cyan2)}
+.btn-reset{border-color:var(--bd2);color:var(--t3)}
+.btn-reset:hover{border-color:var(--t2);color:var(--t2)}
+
+/* Summary strip */
+.summary{padding:10px 20px;background:rgba(0,212,255,.025);border-bottom:1px solid var(--bd);display:flex;gap:24px;flex-wrap:wrap;font-size:10px;color:var(--t3)}
+.summary b{color:var(--t1)}
+.summary .top{color:var(--cyan)}
+
+/* Table */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:1140px}
+thead tr{border-bottom:2px solid var(--bd2);background:var(--s1)}
+th{padding:9px 10px;text-align:left;font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.12em;white-space:nowrap;cursor:pointer;user-select:none;position:relative}
+th:hover{color:var(--cyan)}
+th.asc::after{content:' ↑';color:var(--cyan)}
+th.dsc::after{content:' ↓';color:var(--cyan)}
+tbody tr{border-bottom:1px solid rgba(26,45,71,.6);cursor:pointer;transition:background .1s}
+tbody tr:hover{background:rgba(0,212,255,.04)}
+tbody tr.open{background:rgba(0,212,255,.06)}
+td{padding:9px 10px;white-space:nowrap;font-size:11px;vertical-align:middle}
+.td-n{color:var(--t3);font-size:10px;width:28px}
+.td-h{color:var(--t2);font-size:10px}
+.td-lg{color:var(--t3);font-size:9px;max-width:90px;overflow:hidden;text-overflow:ellipsis}
+.td-pt{font-weight:500;max-width:180px;overflow:hidden;text-overflow:ellipsis}
+.td-mk{color:var(--amber);font-size:9px;text-transform:uppercase;letter-spacing:.06em}
+.td-pk{color:var(--cyan);font-weight:700}
+.td-cu{color:var(--t1)}
+.td-pm{color:var(--green)}
+.td-pi{color:var(--t2)}
+.td-vi{}
+.td-vi.pos{color:var(--green);font-weight:700}
+.td-vi.neg{color:var(--red)}
+.td-vi.neu{color:var(--t2)}
+.td-st{color:var(--amber)}
+.td-ra{color:var(--t2);font-size:10px;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+
+/* Confidence */
+.conf-wrap{display:flex;align-items:center;gap:6px}
+.conf-bar{width:44px;height:3px;background:var(--bd);border-radius:2px;overflow:hidden;flex-shrink:0}
+.conf-fill{height:100%;border-radius:2px}
+.conf-num{font-weight:700;font-size:11px}
+
+/* Risk badge */
+.rbadge{padding:2px 7px;border-radius:3px;font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+.rBAJO{background:var(--green2);color:var(--green);border:1px solid rgba(0,230,118,.25)}
+.rMEDIO{background:var(--amber2);color:var(--amber);border:1px solid rgba(255,183,0,.25)}
+.rALTO{background:var(--red2);color:var(--red);border:1px solid rgba(255,77,77,.25)}
+
+/* Detail row */
+tr.detail-row td{padding:0;background:rgba(0,0,0,.35)}
+.detail{padding:14px 20px 14px 32px;border-left:3px solid var(--cyan);display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px}
+.det-sec h4{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.14em;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--bd)}
+.det-sec p{font-size:10px;color:var(--t2);line-height:1.85;margin-bottom:3px}
+.det-sec .v{color:var(--t1)} .det-sec .cy{color:var(--cyan)} .det-sec .gn{color:var(--green)} .det-sec .rd{color:var(--red)} .det-sec .am{color:var(--amber)}
+.form-dots{display:flex;gap:2px;flex-wrap:wrap;margin-top:4px}
+.fd{display:inline-flex;width:16px;height:16px;align-items:center;justify-content:center;border-radius:2px;font-size:8px;font-weight:700}
+.fdW{background:rgba(0,230,118,.18);color:var(--green);border:1px solid rgba(0,230,118,.35)}
+.fdD{background:rgba(255,183,0,.15);color:var(--amber);border:1px solid rgba(255,183,0,.3)}
+.fdL{background:rgba(255,77,77,.15);color:var(--red);border:1px solid rgba(255,77,77,.3)}
+
+/* No results */
+.no-res{padding:64px 24px;text-align:center;color:var(--t3)}
+.no-res .ico{font-size:28px;display:block;margin-bottom:12px}
+.no-res p{font-size:12px}
+
+/* Footer */
+.footer{border-top:1px solid var(--bd);padding:11px 20px;font-size:9px;color:var(--t3);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:4px}
+
+/* Toast */
+#toast{position:fixed;bottom:20px;right:20px;background:var(--s1);border:1px solid var(--green);color:var(--green);padding:8px 18px;border-radius:4px;font-size:11px;z-index:9000;opacity:0;pointer-events:none;transition:opacity .25s}
+#toast.show{opacity:1}
+#reloadInput{display:none}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--bd3)}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="logo">BETSCAN<em> ///</em> FOOTBALL INTEL</div>
+  <div class="hdr-meta">
+    <span id="hdrDate" class="hdr-date"></span>
+    <span id="hdrStatus"><span class="dot"></span>OFFLINE</span>
+    <span id="hdrReq" class="req-used"></span>
+    <button class="btn-reload" onclick="document.getElementById('reloadInput').click()">CARGAR JSON</button>
+    <input type="file" id="reloadInput" accept=".json" onchange="handleFileChange(event)">
+  </div>
+</header>
+
+<!-- UPLOAD SCREEN -->
+<div id="uploadScreen">
+  <div class="up-ascii">
+    ┌─────────────────────────────────────────────────────────────────┐<br>
+    │&nbsp;&nbsp;Sistema de análisis: Poisson Bivariado + Dixon-Coles + Elo&nbsp;&nbsp;│<br>
+    │&nbsp;&nbsp;Target: cuotas &lt; 2.00 ─ probabilidad real &gt; 60% ─ value +EV&nbsp;&nbsp;│<br>
+    └─────────────────────────────────────────────────────────────────┘
+  </div>
+  <div class="up-zone" id="dropZone" onclick="document.getElementById('fileInput').click()"
+    ondragover="event.preventDefault();this.classList.add('over')"
+    ondragleave="this.classList.remove('over')"
+    ondrop="handleDrop(event)">
+    <input type="file" id="fileInput" accept=".json" onchange="handleFileChange(event)">
+    <span class="up-icon">⬡</span>
+    <div class="up-title">Arrastra o haz clic para cargar</div>
+    <div class="up-sub">Sube el archivo <b>data_YYYY-MM-DD.json</b><br>generado por api_football_extractor.py</div>
+  </div>
+  <div class="up-hint">
+    <span>Campos requeridos:</span> metadata · matches[].league · matches[].home · matches[].away · matches[].odds<br>
+    <span>Opcionales (mejoran confianza):</span> standings · head_to_head · recent_form · season_stats · api_prediction
+  </div>
+  <button class="btn-demo" onclick="loadDemo()">▶ CARGAR DEMO (datos ficticios)</button>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <!-- Stats bar -->
+  <div class="stats-bar" id="statsBar"></div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <span class="fl">Liga</span>
+    <select id="fLeague" onchange="applyFilters()"><option value="">Todas</option></select>
+    <span class="sep"></span>
+    <span class="fl">Mercado</span>
+    <select id="fMarket" onchange="applyFilters()">
+      <option value="">Todos</option>
+      <option value="1X2">1X2</option>
+      <option value="BTTS">BTTS</option>
+      <option value="O/U">Over/Under</option>
+    </select>
+    <span class="sep"></span>
+    <span class="fl">Riesgo</span>
+    <select id="fRisk" onchange="applyFilters()">
+      <option value="">Todos</option>
+      <option value="BAJO">Bajo</option>
+      <option value="MEDIO">Medio</option>
+      <option value="ALTO">Alto</option>
+    </select>
+    <span class="sep"></span>
+    <div class="filter-grp">
+      <span class="fl">Min. conf</span>
+      <input type="range" id="fConf" min="50" max="90" value="60" step="1" oninput="document.getElementById('confVal').textContent=this.value+'%';applyFilters()">
+      <span class="range-val" id="confVal">60%</span>
+    </div>
+    <span class="sep"></span>
+    <div class="filter-grp">
+      <span class="fl">Max picks</span>
+      <select id="fMax" onchange="applyFilters()">
+        <option value="12">12</option><option value="8">8</option><option value="6">6</option><option value="20">20</option><option value="0">Sin límite</option>
+      </select>
+    </div>
+    <div class="f-actions">
+      <button class="btn-reset" onclick="resetFilters()">RESET</button>
+      <button class="btn-tsv" onclick="copyTSV()">COPIAR TSV ⎘</button>
+    </div>
+  </div>
+
+  <!-- Summary strip -->
+  <div class="summary" id="summary"></div>
+
+  <!-- Table -->
+  <div class="tbl-wrap">
+    <table id="picksTable">
+      <thead>
+        <tr>
+          <th class="td-n">#</th>
+          <th onclick="sortBy('hora')">HORA</th>
+          <th onclick="sortBy('liga')">LIGA</th>
+          <th onclick="sortBy('partido')">PARTIDO</th>
+          <th>MERCADO</th>
+          <th onclick="sortBy('pick')">PICK</th>
+          <th onclick="sortBy('cuota')">CUOTA ▾</th>
+          <th onclick="sortBy('pmod')">P_MOD%</th>
+          <th onclick="sortBy('pimp')">P_IMP%</th>
+          <th onclick="sortBy('value')">VALUE ▾</th>
+          <th onclick="sortBy('conf')">CONF%</th>
+          <th onclick="sortBy('stake')">STAKE%</th>
+          <th>RACIONAL</th>
+          <th onclick="sortBy('risk')">RIESGO</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div class="no-res" id="noRes" style="display:none">
+      <span class="ico">◈</span>
+      <p>Sin picks que cumplan los filtros actuales.<br>Reduce el umbral de confianza o cambia los filtros.</p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span id="footerLeft">BETSCAN v2.0 — Modelos: Poisson Bivariado · Dixon-Coles · Elo · Kelly Fraccional</span>
+    <span id="footerRight">⚠ Las estadísticas no garantizan resultados. Apuesta con responsabilidad.</span>
+  </div>
+</div>
+
+<div id="toast">✓ Copiado al portapapeles</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════
+   ESTADO GLOBAL
+═══════════════════════════════════════════════════════════════════ */
+let ALL_PICKS = [];
+let FILTERED_PICKS = [];
+let SORT_COL = 'conf';
+let SORT_DIR = -1; // -1 = desc
+let OPEN_ROW = null;
+let RAW_DATA = null;
+
+/* ════════════════════════════════════════════════════════════════
+   MODELOS ESTADÍSTICOS
+═══════════════════════════════════════════════════════════════════ */
+const LEAGUE_AVG = 1.35;
+
+function poissonPMF(lambda, k) {
+  if (lambda <= 0 || k < 0) return 0;
+  let logP = -lambda + k * Math.log(Math.max(lambda, 1e-10));
+  for (let i = 1; i <= k; i++) logP -= Math.log(i);
+  return Math.exp(logP);
+}
+
+function dcTau(i, j, lH, lA, rho = -0.13) {
+  if (i === 0 && j === 0) return Math.max(0, 1 - lH * lA * rho);
+  if (i === 1 && j === 0) return Math.max(0, 1 + lA * rho);
+  if (i === 0 && j === 1) return Math.max(0, 1 + lH * rho);
+  if (i === 1 && j === 1) return Math.max(0, 1 - rho);
+  return 1;
+}
+
+function calcMatchProbs(lH, lA) {
+  let pH = 0, pD = 0, pA = 0, pOv = 0, pBT = 0;
+  for (let i = 0; i <= 7; i++) {
+    for (let j = 0; j <= 7; j++) {
+      let p = poissonPMF(lH, i) * poissonPMF(lA, j);
+      if (i <= 1 && j <= 1) p *= dcTau(i, j, lH, lA);
+      if (p < 0) p = 0;
+      if (i > j) pH += p;
+      else if (i === j) pD += p;
+      else pA += p;
+      if (i + j > 2) pOv += p;
+      if (i > 0 && j > 0) pBT += p;
+    }
+  }
+  const tot = pH + pD + pA || 1;
+  return {
+    pHome: pH / tot, pDraw: pD / tot, pAway: pA / tot,
+    pOver: Math.min(pOv, 0.98), pUnder: Math.max(1 - pOv, 0.02),
+    pBTTS: Math.min(pBT, 0.98), pNoBTTS: Math.max(1 - pBT, 0.02)
+  };
+}
+
+function getLambdas(match) {
+  const hs = match.home?.season_stats;
+  const as_ = match.away?.season_stats;
+  const hAttHome = parseFloat(hs?.avg_goals_scored?.home || 0);
+  const aDefAway = parseFloat(as_?.avg_goals_conceded?.away || 0);
+  const aAttAway = parseFloat(as_?.avg_goals_scored?.away || 0);
+  const hDefHome = parseFloat(hs?.avg_goals_conceded?.home || 0);
+  // Fallback to total averages if home/away split is 0
+  const hAtt = hAttHome || parseFloat(hs?.avg_goals_scored?.total || 0) || LEAGUE_AVG;
+  const aDef = aDefAway || parseFloat(as_?.avg_goals_conceded?.total || 0) || LEAGUE_AVG;
+  const aAtt = aAttAway || parseFloat(as_?.avg_goals_scored?.total || 0) || LEAGUE_AVG;
+  const hDef = hDefHome || parseFloat(hs?.avg_goals_conceded?.total || 0) || LEAGUE_AVG;
+  const lH = Math.max(0.2, (hAtt * aDef) / LEAGUE_AVG);
+  const lA = Math.max(0.2, (aAtt * hDef) / LEAGUE_AVG);
+  return { lH, lA };
+}
+
+function calcFormScore(recentForm) {
+  if (!recentForm || recentForm.length === 0) return null;
+  const w = [6, 5, 4, 3, 2, 1];
+  let score = 0, max = 0;
+  for (let i = 0; i < Math.min(recentForm.length, 6); i++) {
+    const pts = recentForm[i].result === 'W' ? 3 : recentForm[i].result === 'D' ? 1 : 0;
+    score += pts * w[i];
+    max += 3 * w[i];
+  }
+  return max > 0 ? score / max : null;
+}
+
+function calcH2HScore(h2h, homeTeamName) {
+  if (!h2h || h2h.length < 2) return null;
+  let hw = 0, d = 0;
+  for (const g of h2h) {
+    if (g.winner === homeTeamName) hw++;
+    else if (g.winner === 'Draw') d++;
+  }
+  return (hw * 3 + d) / (h2h.length * 3);
+}
+
+function calcEloProb(homeStanding, awayStanding) {
+  if (!homeStanding || !awayStanding) return null;
+  const hGP = homeStanding.played || 1;
+  const aGP = awayStanding.played || 1;
+  const hPPG = (homeStanding.points || 0) / hGP;
+  const aPPG = (awayStanding.points || 0) / aGP;
+  const diff = hPPG - aPPG;
+  return 1 / (1 + Math.pow(10, -diff * 1.8));
+}
+
+function calcDataCompleteness(match) {
+  let s = 0;
+  if (match.home?.season_stats?.avg_goals_scored?.total !== undefined) s += 0.25;
+  if (match.away?.season_stats?.avg_goals_scored?.total !== undefined) s += 0.25;
+  if ((match.home?.recent_form?.length || 0) >= 3) s += 0.10;
+  if ((match.away?.recent_form?.length || 0) >= 3) s += 0.10;
+  if ((match.head_to_head?.length || 0) >= 2) s += 0.10;
+  if (match.home?.current_standing) s += 0.10;
+  if (match.away?.current_standing) s += 0.10;
+  return Math.min(1, s);
+}
+
+function calcConfidence(pickType, probs, eloProb, hForm, aForm, h2h, apiPct, completeness) {
+  let base;
+  switch (pickType) {
+    case 'home':    base = probs.pHome;    break;
+    case 'away':    base = probs.pAway;    break;
+    case 'draw':    base = probs.pDraw;    break;
+    case 'btts_y':  base = probs.pBTTS;   break;
+    case 'btts_n':  base = probs.pNoBTTS; break;
+    case 'over':    base = probs.pOver;    break;
+    case 'under':   base = probs.pUnder;  break;
+    default:        base = 0.5;
+  }
+
+  const modifiers = [];
+
+  if (eloProb !== null) {
+    const ea = pickType === 'home' ? eloProb : pickType === 'away' ? 1 - eloProb : 0.5;
+    modifiers.push({ v: ea, w: 0.20 });
+  }
+
+  if (hForm !== null && aForm !== null) {
+    const fa = pickType === 'home' ? hForm
+      : pickType === 'away' ? aForm
+      : pickType === 'over' || pickType === 'btts_y' ? (hForm + aForm) / 2
+      : 1 - (hForm + aForm) / 2;
+    modifiers.push({ v: fa, w: 0.20 });
+  }
+
+  if (h2h !== null) {
+    const ha = pickType === 'home' ? h2h : pickType === 'away' ? 1 - h2h : 0.5;
+    modifiers.push({ v: ha, w: 0.10 });
+  }
+
+  if (apiPct !== null) {
+    modifiers.push({ v: Math.min(0.99, Math.max(0.01, apiPct)), w: 0.08 });
+  }
+
+  const totalW = modifiers.reduce((s, m) => s + m.w, 0);
+  const modScore = totalW > 0
+    ? modifiers.reduce((s, m) => s + m.v * m.w, 0) / totalW
+    : 0.5;
+
+  const raw = base * 0.55 + modScore * 0.45;
+  const completePenalty = 0.6 + 0.4 * completeness;
+  return Math.min(0.97, Math.max(0.01, raw * completePenalty));
+}
+
+function classifyRisk(conf, iv, completeness) {
+  if (conf >= 0.70 && completeness >= 0.75 && iv >= 0.03) return 'BAJO';
+  if (conf >= 0.62 && completeness >= 0.50) return 'MEDIO';
+  return 'ALTO';
+}
+
+function generateRationale(match, pickType, lH, lA, probs, hForm, aForm, h2h) {
+  const hN = match.home?.name || 'Local';
+  const aN = match.away?.name || 'Visit.';
+  const parts = [];
+
+  const hRF = (match.home?.recent_form || []).slice(0, 5).map(r => r.result).join('');
+  const aRF = (match.away?.recent_form || []).slice(0, 5).map(r => r.result).join('');
+  const hInj = (match.home?.injuries || []).length;
+  const aInj = (match.away?.injuries || []).length;
+  const hStd = match.home?.current_standing;
+  const aStd = match.away?.current_standing;
+  const apiAdv = match.api_prediction?.advice;
+
+  if (pickType === 'home') {
+    if (hForm !== null && hForm > 0.65) parts.push(`${hN} forma ${hRF||'buena'}`);
+    if (h2h !== null && h2h > 0.62) parts.push('H2H local ✓');
+    if (aInj > 1) parts.push(`${aInj} bajas visitante`);
+    if (hStd && aStd && hStd.rank < aStd.rank) parts.push(`${hN} ${hStd.rank}° vs ${aStd.rank}°`);
+  } else if (pickType === 'away') {
+    if (aForm !== null && aForm > 0.65) parts.push(`${aN} racha ${aRF||'sólida'}`);
+    if (h2h !== null && h2h < 0.38) parts.push('H2H visit. domina');
+    if (hInj > 1) parts.push(`${hInj} bajas local`);
+    if (hStd && aStd && aStd.rank < hStd.rank) parts.push(`${aN} ${aStd.rank}° en tabla`);
+  } else if (pickType === 'over') {
+    parts.push(`λH+λA=${(lH + lA).toFixed(2)}`);
+    if (hForm !== null && aForm !== null && (hForm + aForm) / 2 > 0.6) parts.push('equipos en forma ofensiva');
+    if (probs.pOver > 0.62) parts.push(`P(+2.5)=${(probs.pOver * 100).toFixed(0)}% modelo`);
+  } else if (pickType === 'under') {
+    parts.push(`λ total ${(lH + lA).toFixed(2)} (bajo)`);
+    if (probs.pUnder > 0.62) parts.push('defensas sólidas, baja freq. goles');
+  } else if (pickType === 'btts_y') {
+    parts.push(`λH=${lH.toFixed(2)}, λA=${lA.toFixed(2)}`);
+    parts.push('ambos equipos anotadores');
+  } else if (pickType === 'btts_n') {
+    parts.push(`λH=${lH.toFixed(2)}, λA=${lA.toFixed(2)}`);
+    parts.push('al menos 1 equipo defensivo');
+  }
+
+  if (parts.length < 2 && apiAdv) {
+    parts.push(`API: ${apiAdv.slice(0, 22)}`);
+  }
+
+  return parts.slice(0, 3).join(' · ') || 'Análisis Poisson + Dixon-Coles';
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ANALIZADOR DE PARTIDO
+═══════════════════════════════════════════════════════════════════ */
+function analyzeMatch(match) {
+  const picks = [];
+  const hN = match.home?.name || '?';
+  const aN = match.away?.name || '?';
+  const odds = match.odds || {};
+
+  // Hora local Chile
+  let hora = '--:--';
+  try {
+    const d = new Date(match.date);
+    hora = d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Santiago' });
+  } catch (e) {}
+
+  const { lH, lA } = getLambdas(match);
+  const probs = calcMatchProbs(lH, lA);
+  const hForm = calcFormScore(match.home?.recent_form);
+  const aForm = calcFormScore(match.away?.recent_form);
+  const h2hScore = calcH2HScore(match.head_to_head, hN);
+  const eloProb = calcEloProb(match.home?.current_standing, match.away?.current_standing);
+  const completeness = calcDataCompleteness(match);
+
+  // Attempt to get API percentage predictions
+  function getApiPct(pickType) {
+    const ap = match.api_prediction?.percent;
+    if (!ap) return null;
+    const h = parseFloat(ap.home) / 100 || 0;
+    const d = parseFloat(ap.draw) / 100 || 0;
+    const a = parseFloat(ap.away) / 100 || 0;
+    if (pickType === 'home') return h;
+    if (pickType === 'away') return a;
+    if (pickType === 'draw') return d;
+    if (pickType === 'over' || pickType === 'btts_y') return (h * 0.5 + a * 0.5) * 0.8 + 0.3;
+    return null;
+  }
+
+  // Market definitions: [pickType, market label, pick label, p_model fn, odds value]
+  const markets = [
+    { type: 'home',   mkt: '1X2',    pkl: hN,             pMod: probs.pHome,    oddV: odds.match_winner?.Home },
+    { type: 'away',   mkt: '1X2',    pkl: aN,             pMod: probs.pAway,    oddV: odds.match_winner?.Away },
+    { type: 'draw',   mkt: '1X2',    pkl: 'Empate',       pMod: probs.pDraw,    oddV: odds.match_winner?.Draw },
+    { type: 'btts_y', mkt: 'BTTS',   pkl: 'Ambos Anotan', pMod: probs.pBTTS,    oddV: odds.btts?.Yes },
+    { type: 'btts_n', mkt: 'BTTS',   pkl: 'No BTTS',      pMod: probs.pNoBTTS,  oddV: odds.btts?.No },
+    { type: 'over',   mkt: 'O/U',    pkl: 'Over 2.5',     pMod: probs.pOver,    oddV: odds.over_under?.['Over 2.5'] },
+    { type: 'under',  mkt: 'O/U',    pkl: 'Under 2.5',    pMod: probs.pUnder,   oddV: odds.over_under?.['Under 2.5'] },
+  ];
+
+  for (const m of markets) {
+    const o = parseFloat(m.oddV);
+    if (!o || o >= 2.0 || o <= 1.01) continue; // skip if no odds or >= 2.0
+    const pImp = 1 / o;
+    const iv = m.pMod * o - 1;
+    if (iv <= -0.05) continue; // skip clear negative value
+
+    const apiPct = getApiPct(m.type);
+    const conf = calcConfidence(m.type, probs, eloProb, hForm, aForm, h2hScore, apiPct, completeness);
+    if (conf < 0.53) continue; // pre-filter
+
+    const kelly = Math.max(0, Math.min(0.20, ((m.pMod * o - 1) / (o - 1)) * 0.25));
+    const risk = classifyRisk(conf, iv, completeness);
+    const rational = generateRationale(match, m.type, lH, lA, probs, hForm, aForm, h2hScore);
+
+    picks.push({
+      hora, liga: match.league?.name || '?',
+      partido: `${hN} vs ${aN}`,
+      mercado: m.mkt, pick: m.pkl,
+      cuota: o,
+      pmod: parseFloat((m.pMod * 100).toFixed(1)),
+      pimp: parseFloat((pImp * 100).toFixed(1)),
+      value: parseFloat(iv.toFixed(3)),
+      conf: parseFloat((conf * 100).toFixed(1)),
+      stake: parseFloat((kelly * 100).toFixed(1)),
+      rational, risk,
+      // For detail expansion
+      _match: match, _probs: probs, _lH: lH, _lA: lA,
+      _hForm: hForm, _aForm: aForm, _h2h: h2hScore, _elo: eloProb, _comp: completeness
+    });
+  }
+
+  return picks;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PROCESAMIENTO DEL JSON
+═══════════════════════════════════════════════════════════════════ */
+function processJSON(data) {
+  RAW_DATA = data;
+  ALL_PICKS = [];
+  for (const match of data.matches || []) {
+    try {
+      ALL_PICKS.push(...analyzeMatch(match));
+    } catch (e) { console.warn('Error analyzing match:', e); }
+  }
+  ALL_PICKS.sort((a, b) => b.conf - a.conf);
+  populateLeagueFilter();
+  applyFilters();
+  updateStats(data);
+  showDashboard(data);
+}
+
+function updateStats(data) {
+  const meta = data.metadata || {};
+  document.getElementById('hdrDate').textContent = meta.target_date || '';
+  document.getElementById('hdrStatus').innerHTML = `<span class="dot"></span>ACTIVO — ${meta.total_processed || (data.matches||[]).length} PARTIDOS`;
+  document.getElementById('hdrReq').textContent = meta.api_requests_used ? `${meta.api_requests_used} req API` : '';
+}
+
+function showDashboard(data) {
+  document.getElementById('uploadScreen').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+}
+
+/* ════════════════════════════════════════════════════════════════
+   FILTROS Y RENDERS
+═══════════════════════════════════════════════════════════════════ */
+function populateLeagueFilter() {
+  const sel = document.getElementById('fLeague');
+  const current = sel.value;
+  const leagues = [...new Set(ALL_PICKS.map(p => p.liga))].sort();
+  sel.innerHTML = '<option value="">Todas las ligas</option>' +
+    leagues.map(l => `<option value="${l}" ${l === current ? 'selected' : ''}>${l}</option>`).join('');
+}
+
+function applyFilters() {
+  const fLeague = document.getElementById('fLeague').value;
+  const fMarket = document.getElementById('fMarket').value;
+  const fRisk   = document.getElementById('fRisk').value;
+  const fConf   = parseFloat(document.getElementById('fConf').value);
+  const fMax    = parseInt(document.getElementById('fMax').value) || 0;
+
+  let filtered = ALL_PICKS.filter(p =>
+    (!fLeague || p.liga === fLeague) &&
+    (!fMarket || p.mercado === fMarket) &&
+    (!fRisk   || p.risk === fRisk) &&
+    p.conf >= fConf
+  );
+
+  // Sort
+  filtered.sort((a, b) => {
+    const av = a[SORT_COL]; const bv = b[SORT_COL];
+    if (typeof av === 'string') return SORT_DIR * av.localeCompare(bv);
+    return SORT_DIR * (av - bv);
+  });
+
+  if (fMax > 0) filtered = filtered.slice(0, fMax);
+
+  FILTERED_PICKS = filtered;
+  renderStats();
+  renderSummary();
+  renderTable();
+}
+
+function sortBy(col) {
+  if (SORT_COL === col) SORT_DIR *= -1;
+  else { SORT_COL = col; SORT_DIR = -1; }
+  document.querySelectorAll('th.asc,th.dsc').forEach(t => t.classList.remove('asc','dsc'));
+  applyFilters();
+}
+
+function resetFilters() {
+  document.getElementById('fLeague').value = '';
+  document.getElementById('fMarket').value = '';
+  document.getElementById('fRisk').value = '';
+  document.getElementById('fConf').value = 60;
+  document.getElementById('confVal').textContent = '60%';
+  document.getElementById('fMax').value = '12';
+  SORT_COL = 'conf'; SORT_DIR = -1;
+  applyFilters();
+}
+
+/* ── Stats cards ── */
+function renderStats() {
+  const picks = FILTERED_PICKS;
+  const allConf = picks.length ? picks.reduce((s, p) => s + p.conf, 0) / picks.length : 0;
+  const allIV   = picks.length ? picks.reduce((s, p) => s + p.value, 0) / picks.length : 0;
+  const allStake = picks.length ? picks.reduce((s, p) => s + p.stake, 0) : 0;
+  const bajo = picks.filter(p => p.risk === 'BAJO').length;
+  const topConf = picks.length ? picks[0] : null;
+
+  document.getElementById('statsBar').innerHTML = `
+    <div class="sc"><div class="sc-lbl">Picks del Día</div><div class="sc-val cy">${picks.length}</div><div class="sc-sub">${ALL_PICKS.length} totales generados</div></div>
+    <div class="sc"><div class="sc-lbl">Confianza Media</div><div class="sc-val ${allConf>=70?'gn':allConf>=60?'am':'rd'}">${allConf.toFixed(1)}%</div><div class="sc-sub">Umbral: ${document.getElementById('fConf').value}%</div></div>
+    <div class="sc"><div class="sc-lbl">Value Index Med.</div><div class="sc-val ${allIV>0?'gn':'rd'}">${allIV>0?'+':''}${(allIV*100).toFixed(1)}%</div><div class="sc-sub">+EV esperado</div></div>
+    <div class="sc"><div class="sc-lbl">Riesgo Bajo</div><div class="sc-val gn">${bajo}</div><div class="sc-sub">de ${picks.length} picks</div></div>
+    <div class="sc"><div class="sc-lbl">Stake Total</div><div class="sc-val am">${allStake.toFixed(1)}%</div><div class="sc-sub">% capital diario</div></div>
+    ${topConf ? `<div class="sc"><div class="sc-lbl">Top Pick</div><div class="sc-val" style="font-size:12px;color:var(--cyan)">${topConf.partido.split(' vs ')[0]}</div><div class="sc-sub">${topConf.conf.toFixed(0)}% conf · ${topConf.pick}</div></div>` : ''}
+  `;
+}
+
+/* ── Summary strip ── */
+function renderSummary() {
+  const p = FILTERED_PICKS;
+  if (!p.length) { document.getElementById('summary').innerHTML = ''; return; }
+  const topPick = p[0];
+  const ligas = [...new Set(p.map(x => x.liga))].join(', ');
+  document.getElementById('summary').innerHTML = `
+    <span>Partidos: <b>${[...new Set(p.map(x=>x.partido))].length}</b></span>
+    <span>Ligas activas: <b>${ligas.slice(0,80)}</b></span>
+    <span>Top pick: <span class="top">${topPick.partido} · ${topPick.mercado} · ${topPick.pick} (${topPick.conf.toFixed(0)}%)</span></span>
+    <span>Cuota media: <b>${(p.reduce((s,x)=>s+x.cuota,0)/p.length).toFixed(2)}</b></span>
+  `;
+}
+
+/* ── Main table ── */
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  const noRes = document.getElementById('noRes');
+  if (!FILTERED_PICKS.length) {
+    tbody.innerHTML = '';
+    noRes.style.display = 'block';
+    return;
+  }
+  noRes.style.display = 'none';
+
+  // Update sort indicators
+  document.querySelectorAll('th').forEach(th => { th.classList.remove('asc','dsc'); });
+
+  tbody.innerHTML = FILTERED_PICKS.map((p, i) => {
+    const confColor = p.conf >= 72 ? 'var(--green)' : p.conf >= 62 ? 'var(--amber)' : 'var(--red)';
+    const confFill = `width:${Math.round(p.conf)}%;background:${confColor}`;
+    const ivClass = p.value > 0.05 ? 'pos' : p.value < 0 ? 'neg' : 'neu';
+    const ivStr = p.value > 0 ? `+${(p.value*100).toFixed(1)}%` : `${(p.value*100).toFixed(1)}%`;
+
+    return `
+    <tr onclick="toggleDetail(${i})" id="row-${i}">
+      <td class="td-n">${i+1}</td>
+      <td class="td-h">${p.hora}</td>
+      <td class="td-lg" title="${p.liga}">${p.liga}</td>
+      <td class="td-pt" title="${p.partido}">${p.partido}</td>
+      <td class="td-mk">${p.mercado}</td>
+      <td class="td-pk">${p.pick}</td>
+      <td class="td-cu">${p.cuota.toFixed(2)}</td>
+      <td class="td-pm">${p.pmod.toFixed(1)}%</td>
+      <td class="td-pi">${p.pimp.toFixed(1)}%</td>
+      <td class="td-vi ${ivClass}">${ivStr}</td>
+      <td>
+        <div class="conf-wrap">
+          <div class="conf-bar"><div class="conf-fill" style="${confFill}"></div></div>
+          <span class="conf-num" style="color:${confColor}">${p.conf.toFixed(0)}%</span>
+        </div>
+      </td>
+      <td class="td-st">${p.stake.toFixed(1)}%</td>
+      <td class="td-ra" title="${p.rational}">${p.rational}</td>
+      <td><span class="rbadge r${p.risk}">${p.risk}</span></td>
+    </tr>
+    <tr class="detail-row" id="detail-${i}" style="display:none">
+      <td colspan="14">${buildDetail(p)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function buildDetail(p) {
+  const m = p._match;
+  const hRF = (m.home?.recent_form || []).slice(0, 6);
+  const aRF = (m.away?.recent_form || []).slice(0, 6);
+  const h2hArr = (m.head_to_head || []).slice(0, 5);
+  const hInj = m.home?.injuries || [];
+  const aInj = m.away?.injuries || [];
+  const hStd = m.home?.current_standing;
+  const aStd = m.away?.current_standing;
+  const api = m.api_prediction;
+
+  const formDots = arr => arr.map(r =>
+    `<span class="fd fd${r.result}" title="${r.date} ${r.was_home?'(L)':'(V)'}: ${r.score?.home}-${r.score?.away}">${r.result}</span>`
+  ).join('');
+
+  const h2hHTML = h2hArr.map(g =>
+    `<p>${g.date.slice(0,7)} · <span class="v">${g.home}</span> ${g.score.home}-${g.score.away} ${g.away} · <span class="${g.winner==='Draw'?'am':'cy'}">${g.winner}</span></p>`
+  ).join('') || '<p>Sin datos H2H</p>';
+
+  const injHTML = (team, inj) => inj.length
+    ? inj.map(i => `<p><span class="rd">●</span> ${i.player} <span class="am">[${i.type}]</span></p>`).join('')
+    : '<p><span class="gn">Sin bajas confirmadas</span></p>';
+
+  return `<div class="detail">
+    <div class="det-sec">
+      <h4>Forma ${m.home?.name||'Local'} (últimas ${hRF.length})</h4>
+      <div class="form-dots">${formDots(hRF)}</div>
+      ${hStd ? `<p style="margin-top:7px">Pos: <span class="cy">${hStd.rank}°</span> · Pts: <span class="v">${hStd.points}</span> · Jug: ${hStd.played}</p>` : ''}
+      <p>λ home: <span class="cy">${p._lH.toFixed(2)}</span> goles esperados</p>
+    </div>
+    <div class="det-sec">
+      <h4>Forma ${m.away?.name||'Visit.'} (últimas ${aRF.length})</h4>
+      <div class="form-dots">${formDots(aRF)}</div>
+      ${aStd ? `<p style="margin-top:7px">Pos: <span class="cy">${aStd.rank}°</span> · Pts: <span class="v">${aStd.points}</span> · Jug: ${aStd.played}</p>` : ''}
+      <p>λ away: <span class="cy">${p._lA.toFixed(2)}</span> goles esperados</p>
+    </div>
+    <div class="det-sec">
+      <h4>H2H (últimos ${h2hArr.length})</h4>
+      ${h2hHTML}
+    </div>
+    <div class="det-sec">
+      <h4>Probabilidades Modelo</h4>
+      <p>P(Local) : <span class="gn">${(p._probs.pHome*100).toFixed(1)}%</span></p>
+      <p>P(Empate): <span class="am">${(p._probs.pDraw*100).toFixed(1)}%</span></p>
+      <p>P(Visit.) : <span class="rd">${(p._probs.pAway*100).toFixed(1)}%</span></p>
+      <p>P(Over 2.5): <span class="v">${(p._probs.pOver*100).toFixed(1)}%</span></p>
+      <p>P(BTTS): <span class="v">${(p._probs.pBTTS*100).toFixed(1)}%</span></p>
+    </div>
+    <div class="det-sec">
+      <h4>Factores de Confianza</h4>
+      <p>Elo (standings): <span class="cy">${p._elo !== null ? (p._elo*100).toFixed(1)+'%' : 'N/D'}</span></p>
+      <p>Forma local: <span class="cy">${p._hForm !== null ? (p._hForm*100).toFixed(1)+'%' : 'N/D'}</span></p>
+      <p>Forma visit.: <span class="cy">${p._aForm !== null ? (p._aForm*100).toFixed(1)+'%' : 'N/D'}</span></p>
+      <p>H2H (local): <span class="cy">${p._h2h !== null ? (p._h2h*100).toFixed(1)+'%' : 'N/D'}</span></p>
+      <p>Completitud datos: <span class="${p._comp>=0.75?'gn':p._comp>=0.5?'am':'rd'}">${(p._comp*100).toFixed(0)}%</span></p>
+    </div>
+    <div class="det-sec">
+      <h4>Bajas · API Predicción</h4>
+      <p><span class="t2">${m.home?.name||'Local'}:</span></p>
+      ${injHTML(m.home?.name, hInj)}
+      <p style="margin-top:6px"><span class="t2">${m.away?.name||'Visit.'}:</span></p>
+      ${injHTML(m.away?.name, aInj)}
+      ${api ? `<p style="margin-top:8px">API ganador: <span class="am">${api.winner||'N/D'}</span></p>
+      <p style="font-size:9px;margin-top:2px">${api.advice||''}</p>` : ''}
+    </div>
+  </div>`;
+}
+
+function toggleDetail(i) {
+  const dRow = document.getElementById(`detail-${i}`);
+  const mRow = document.getElementById(`row-${i}`);
+  if (!dRow) return;
+  const isOpen = dRow.style.display !== 'none';
+  // close previous
+  if (OPEN_ROW !== null && OPEN_ROW !== i) {
+    const pD = document.getElementById(`detail-${OPEN_ROW}`);
+    const pR = document.getElementById(`row-${OPEN_ROW}`);
+    if (pD) pD.style.display = 'none';
+    if (pR) pR.classList.remove('open');
+  }
+  dRow.style.display = isOpen ? 'none' : '';
+  mRow.classList.toggle('open', !isOpen);
+  OPEN_ROW = isOpen ? null : i;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   COPY TSV
+═══════════════════════════════════════════════════════════════════ */
+function copyTSV() {
+  if (!FILTERED_PICKS.length) return;
+  const header = ['Hora','Liga','Partido','Mercado','Pick','Cuota','P_Modelo%','P_Implícita%','Value_Index','Confianza%','Stake_%Capital','Racional','Riesgo'].join('\t');
+  const rows = FILTERED_PICKS.map(p =>
+    [p.hora, p.liga, p.partido, p.mercado, p.pick,
+     p.cuota.toFixed(2), p.pmod.toFixed(1)+'%', p.pimp.toFixed(1)+'%',
+     (p.value*100).toFixed(1)+'%', p.conf.toFixed(1)+'%',
+     p.stake.toFixed(1)+'%', p.rational, p.risk].join('\t')
+  ).join('\n');
+  const text = header + '\n' + rows;
+  navigator.clipboard.writeText(text).then(() => showToast('✓ TSV copiado al portapapeles'));
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   FILE HANDLING
+═══════════════════════════════════════════════════════════════════ */
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('over');
+  const file = e.dataTransfer.files[0];
+  if (file) readFile(file);
+}
+
+function handleFileChange(e) {
+  const file = e.target.files[0];
+  if (file) readFile(file);
+  e.target.value = '';
+}
+
+function readFile(file) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!data.matches) throw new Error('JSON inválido: falta campo "matches"');
+      processJSON(data);
+    } catch (err) {
+      alert('Error al procesar el JSON: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   DEMO DATA
+═══════════════════════════════════════════════════════════════════ */
+function loadDemo() {
+  const demo = {
+    metadata: {
+      target_date: new Date().toISOString().slice(0,10),
+      total_processed: 5,
+      api_requests_used: 142,
+      season: new Date().getFullYear()
+    },
+    matches: [
+      {
+        fixture_id: 1001,
+        date: new Date().toISOString().slice(0,10) + 'T18:00:00+00:00',
+        league: { id: 94, name: 'Primeira Liga (POR)', country: 'Portugal', round: 'Regular Season - 28' },
+        home: {
+          name: 'Benfica', id: 211,
+          season_stats: { avg_goals_scored: { home: '2.4', away: '1.8', total: '2.1' }, avg_goals_conceded: { home: '0.7', away: '1.1', total: '0.9' }, form: 'WWWDW', wins: { home: 11, away: 8, total: 19 } },
+          recent_form: [ {date:'2025-04-06',result:'W',was_home:true,score:{home:3,away:0}}, {date:'2025-03-30',result:'W',was_home:false,score:{home:1,away:2}}, {date:'2025-03-23',result:'W',was_home:true,score:{home:2,away:1}}, {date:'2025-03-16',result:'D',was_home:false,score:{home:1,away:1}}, {date:'2025-03-09',result:'W',was_home:true,score:{home:4,away:0}} ],
+          current_standing: { rank: 1, points: 73, played: 28, wins: 23, draws: 4, losses: 1, goals_for: 68, goals_against: 20 },
+          injuries: [{ player: 'Kokcu', type: 'Doubtful', reason: 'Muscle' }]
+        },
+        away: {
+          name: 'Gil Vicente', id: 212,
+          season_stats: { avg_goals_scored: { home: '1.1', away: '0.8', total: '0.95' }, avg_goals_conceded: { home: '1.5', away: '2.0', total: '1.75' }, form: 'LLDWL', wins: { home: 5, away: 3, total: 8 } },
+          recent_form: [ {date:'2025-04-06',result:'L',was_home:false,score:{home:0,away:2}}, {date:'2025-03-30',result:'L',was_home:true,score:{home:1,away:2}}, {date:'2025-03-23',result:'D',was_home:false,score:{home:0,away:0}}, {date:'2025-03-16',result:'W',was_home:true,score:{home:2,away:0}}, {date:'2025-03-09',result:'L',was_home:false,score:{home:3,away:1}} ],
+          current_standing: { rank: 14, points: 29, played: 28, wins: 8, draws: 5, losses: 15 },
+          injuries: [{ player: 'Santos', type: 'Out', reason: 'Suspension' }, { player: 'Ferreira', type: 'Out', reason: 'Injury' }]
+        },
+        head_to_head: [
+          { date:'2024-11-02', home:'Benfica', away:'Gil Vicente', score:{home:3,away:0}, winner:'Benfica' },
+          { date:'2024-03-15', home:'Gil Vicente', away:'Benfica', score:{home:0,away:2}, winner:'Benfica' },
+          { date:'2023-10-08', home:'Benfica', away:'Gil Vicente', score:{home:4,away:1}, winner:'Benfica' },
+          { date:'2023-01-22', home:'Gil Vicente', away:'Benfica', score:{home:1,away:1}, winner:'Draw' },
+          { date:'2022-04-10', home:'Benfica', away:'Gil Vicente', score:{home:2,away:0}, winner:'Benfica' }
+        ],
+        standings: [],
+        odds: { match_winner: { Home: 1.35, Draw: 4.80, Away: 8.50 }, btts: { Yes: 1.92, No: 1.88 }, over_under: { 'Over 2.5': 1.60, 'Under 2.5': 2.20 } },
+        api_prediction: { winner: 'Benfica', percent: { home: '74%', draw: '16%', away: '10%' }, advice: 'Benfica to win', under_over: '+' }
+      },
+      {
+        fixture_id: 1002,
+        date: new Date().toISOString().slice(0,10) + 'T15:30:00+00:00',
+        league: { id: 88, name: 'Eredivisie (NED)', country: 'Netherlands', round: 'Regular Season - 29' },
+        home: {
+          name: 'PSV Eindhoven', id: 301,
+          season_stats: { avg_goals_scored: { home: '3.1', away: '2.2', total: '2.65' }, avg_goals_conceded: { home: '0.6', away: '0.9', total: '0.75' }, form: 'WWWWW' },
+          recent_form: [ {date:'2025-04-05',result:'W',was_home:true,score:{home:4,away:0}}, {date:'2025-03-29',result:'W',was_home:false,score:{home:0,away:3}}, {date:'2025-03-22',result:'W',was_home:true,score:{home:3,away:1}}, {date:'2025-03-15',result:'W',was_home:false,score:{home:1,away:2}}, {date:'2025-03-08',result:'W',was_home:true,score:{home:2,away:0}} ],
+          current_standing: { rank: 1, points: 81, played: 29, wins: 26, draws: 3, losses: 0 },
+          injuries: []
+        },
+        away: {
+          name: 'NEC Nijmegen', id: 302,
+          season_stats: { avg_goals_scored: { home: '1.3', away: '0.9', total: '1.1' }, avg_goals_conceded: { home: '1.4', away: '2.1', total: '1.75' } },
+          recent_form: [ {date:'2025-04-05',result:'L',was_home:true,score:{home:1,away:2}}, {date:'2025-03-29',result:'D',was_home:false,score:{home:1,away:1}}, {date:'2025-03-22',result:'L',was_home:true,score:{home:0,away:1}}, {date:'2025-03-15',result:'W',was_home:false,score:{home:2,away:3}}, {date:'2025-03-08',result:'L',was_home:true,score:{home:0,away:2}} ],
+          current_standing: { rank: 12, points: 32, played: 29 },
+          injuries: [{ player: 'De Wit', type: 'Out', reason: 'Hamstring' }, { player: 'Tavares', type: 'Out', reason: 'Suspension' }, { player: 'Odenthal', type: 'Doubtful', reason: 'Knock' }]
+        },
+        head_to_head: [
+          { date:'2024-10-19', home:'PSV Eindhoven', away:'NEC Nijmegen', score:{home:4,away:0}, winner:'PSV Eindhoven' },
+          { date:'2024-03-02', home:'NEC Nijmegen', away:'PSV Eindhoven', score:{home:0,away:3}, winner:'PSV Eindhoven' },
+          { date:'2023-11-25', home:'PSV Eindhoven', away:'NEC Nijmegen', score:{home:5,away:1}, winner:'PSV Eindhoven' },
+          { date:'2023-03-18', home:'NEC Nijmegen', away:'PSV Eindhoven', score:{home:1,away:2}, winner:'PSV Eindhoven' }
+        ],
+        standings: [],
+        odds: { match_winner: { Home: 1.22, Draw: 6.50, Away: 12.00 }, btts: { Yes: 1.80, No: 1.98 }, over_under: { 'Over 2.5': 1.48, 'Under 2.5': 2.50 } },
+        api_prediction: { winner: 'PSV Eindhoven', percent: { home: '82%', draw: '12%', away: '6%' }, advice: 'PSV strong home form', under_over: '+' }
+      },
+      {
+        fixture_id: 1003,
+        date: new Date().toISOString().slice(0,10) + 'T20:45:00+00:00',
+        league: { id: 39, name: 'Premier League (ENG)', country: 'England', round: 'Regular Season - 32' },
+        home: {
+          name: 'Arsenal', id: 401,
+          season_stats: { avg_goals_scored: { home: '2.3', away: '1.7', total: '2.0' }, avg_goals_conceded: { home: '0.8', away: '1.0', total: '0.9' } },
+          recent_form: [ {date:'2025-04-07',result:'W',was_home:false,score:{home:0,away:2}}, {date:'2025-03-31',result:'W',was_home:true,score:{home:3,away:1}}, {date:'2025-03-22',result:'W',was_home:false,score:{home:1,away:2}}, {date:'2025-03-15',result:'D',was_home:true,score:{home:2,away:2}}, {date:'2025-03-08',result:'W',was_home:false,score:{home:0,away:1}} ],
+          current_standing: { rank: 2, points: 67, played: 31, wins: 21, draws: 4, losses: 6 },
+          injuries: []
+        },
+        away: {
+          name: 'Wolves', id: 402,
+          season_stats: { avg_goals_scored: { home: '0.9', away: '0.7', total: '0.8' }, avg_goals_conceded: { home: '1.6', away: '2.0', total: '1.8' } },
+          recent_form: [ {date:'2025-04-07',result:'L',was_home:true,score:{home:0,away:2}}, {date:'2025-03-31',result:'L',was_home:false,score:{home:2,away:0}}, {date:'2025-03-22',result:'D',was_home:true,score:{home:1,away:1}}, {date:'2025-03-15',result:'L',was_home:false,score:{home:3,away:1}}, {date:'2025-03-08',result:'W',was_home:true,score:{home:2,away:1}} ],
+          current_standing: { rank: 19, points: 22, played: 31 },
+          injuries: [{ player: 'Cunha', type: 'Doubtful', reason: 'Muscle' }, { player: 'Lemina', type: 'Out', reason: 'Suspension' }]
+        },
+        head_to_head: [
+          { date:'2024-11-02', home:'Arsenal', away:'Wolves', score:{home:2,away:0}, winner:'Arsenal' },
+          { date:'2024-02-03', home:'Wolves', away:'Arsenal', score:{home:0,away:2}, winner:'Arsenal' },
+          { date:'2023-11-11', home:'Arsenal', away:'Wolves', score:{home:2,away:1}, winner:'Arsenal' },
+          { date:'2023-01-23', home:'Wolves', away:'Arsenal', score:{home:1,away:0}, winner:'Wolves' }
+        ],
+        standings: [],
+        odds: { match_winner: { Home: 1.45, Draw: 4.50, Away: 7.00 }, btts: { Yes: 1.95, No: 1.85 }, over_under: { 'Over 2.5': 1.75, 'Under 2.5': 2.05 } },
+        api_prediction: { winner: 'Arsenal', percent: { home: '68%', draw: '19%', away: '13%' }, advice: 'Arsenal to win at home', under_over: '+' }
+      },
+      {
+        fixture_id: 1004,
+        date: new Date().toISOString().slice(0,10) + 'T14:00:00+00:00',
+        league: { id: 144, name: 'Belgian Pro League', country: 'Belgium', round: 'Championship Round - 6' },
+        home: {
+          name: 'Club Brugge', id: 501,
+          season_stats: { avg_goals_scored: { home: '2.0', away: '1.5', total: '1.75' }, avg_goals_conceded: { home: '0.8', away: '1.1', total: '0.95' } },
+          recent_form: [ {date:'2025-04-06',result:'W',was_home:false,score:{home:1,away:2}}, {date:'2025-03-30',result:'W',was_home:true,score:{home:3,away:1}}, {date:'2025-03-23',result:'D',was_home:false,score:{home:2,away:2}}, {date:'2025-03-16',result:'W',was_home:true,score:{home:2,away:0}}, {date:'2025-03-09',result:'W',was_home:false,score:{home:0,away:1}} ],
+          current_standing: { rank: 1, points: 72, played: 34, wins: 22, draws: 6, losses: 6 },
+          injuries: []
+        },
+        away: {
+          name: 'RWDM', id: 502,
+          season_stats: { avg_goals_scored: { home: '1.1', away: '0.7', total: '0.9' }, avg_goals_conceded: { home: '1.8', away: '2.4', total: '2.1' } },
+          recent_form: [ {date:'2025-04-06',result:'L',was_home:true,score:{home:0,away:2}}, {date:'2025-03-30',result:'L',was_home:false,score:{home:2,away:0}}, {date:'2025-03-23',result:'L',was_home:true,score:{home:1,away:3}}, {date:'2025-03-16',result:'D',was_home:false,score:{home:0,away:0}}, {date:'2025-03-09',result:'L',was_home:true,score:{home:0,away:2}} ],
+          current_standing: { rank: 8, points: 41, played: 34 },
+          injuries: [{ player: 'Diarra', type: 'Out', reason: 'Injury' }]
+        },
+        head_to_head: [
+          { date:'2024-09-21', home:'Club Brugge', away:'RWDM', score:{home:4,away:0}, winner:'Club Brugge' },
+          { date:'2024-01-13', home:'RWDM', away:'Club Brugge', score:{home:0,away:3}, winner:'Club Brugge' },
+          { date:'2023-10-07', home:'Club Brugge', away:'RWDM', score:{home:2,away:0}, winner:'Club Brugge' }
+        ],
+        standings: [],
+        odds: { match_winner: { Home: 1.40, Draw: 4.60, Away: 7.50 }, btts: { Yes: 1.90, No: 1.88 }, over_under: { 'Over 2.5': 1.68, 'Under 2.5': 2.10 } },
+        api_prediction: { winner: 'Club Brugge', percent: { home: '70%', draw: '18%', away: '12%' }, advice: 'Brugge dominant at home' }
+      },
+      {
+        fixture_id: 1005,
+        date: new Date().toISOString().slice(0,10) + 'T17:00:00+00:00',
+        league: { id: 135, name: 'Serie A (ITA)', country: 'Italy', round: 'Regular Season - 31' },
+        home: {
+          name: 'Napoli', id: 601,
+          season_stats: { avg_goals_scored: { home: '1.9', away: '1.5', total: '1.7' }, avg_goals_conceded: { home: '0.7', away: '1.0', total: '0.85' } },
+          recent_form: [ {date:'2025-04-06',result:'W',was_home:true,score:{home:2,away:0}}, {date:'2025-03-30',result:'W',was_home:false,score:{home:0,away:2}}, {date:'2025-03-23',result:'D',was_home:true,score:{home:1,away:1}}, {date:'2025-03-16',result:'W',was_home:false,score:{home:1,away:3}}, {date:'2025-03-09',result:'W',was_home:true,score:{home:2,away:1}} ],
+          current_standing: { rank: 3, points: 62, played: 30 },
+          injuries: []
+        },
+        away: {
+          name: 'Venezia', id: 602,
+          season_stats: { avg_goals_scored: { home: '0.8', away: '0.5', total: '0.65' }, avg_goals_conceded: { home: '1.9', away: '2.3', total: '2.1' } },
+          recent_form: [ {date:'2025-04-06',result:'L',was_home:false,score:{home:3,away:0}}, {date:'2025-03-30',result:'L',was_home:true,score:{home:0,away:2}}, {date:'2025-03-23',result:'L',was_home:false,score:{home:2,away:0}}, {date:'2025-03-16',result:'D',was_home:true,score:{home:1,away:1}}, {date:'2025-03-09',result:'L',was_home:false,score:{home:1,away:0}} ],
+          current_standing: { rank: 19, points: 18, played: 30 },
+          injuries: [{ player: 'Pohjanpalo', type: 'Doubtful', reason: 'Knock' }]
+        },
+        head_to_head: [
+          { date:'2024-10-04', home:'Napoli', away:'Venezia', score:{home:2,away:1}, winner:'Napoli' },
+          { date:'2019-12-01', home:'Venezia', away:'Napoli', score:{home:0,away:2}, winner:'Napoli' }
+        ],
+        standings: [],
+        odds: { match_winner: { Home: 1.48, Draw: 4.20, Away: 6.50 }, btts: { Yes: 1.98, No: 1.83 }, over_under: { 'Over 2.5': 1.80, 'Under 2.5': 1.95 } },
+        api_prediction: { winner: 'Napoli', percent: { home: '66%', draw: '21%', away: '13%' }, advice: 'Napoli to win', under_over: '+' }
+      }
+    ]
+  };
+  processJSON(demo);
+  showToast('Demo cargado: 5 partidos ficticios');
+}
+</script>
+</body>
+</html>
