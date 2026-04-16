@@ -1048,7 +1048,11 @@ function loadDemo() {
 }
 </script>
 <script>
-// Manejador del Drag & Drop y Botón de Subida
+// =====================================================================
+// BETSCAN CORE - Motor Matemático y Estadístico V2.0
+// =====================================================================
+
+// 1. Manejadores de Archivo
 function handleFileChange(event) {
     const file = event.target.files[0] || (event.dataTransfer && event.dataTransfer.files[0]);
     if (!file) return;
@@ -1071,71 +1075,157 @@ function handleDrop(event) {
     handleFileChange(event);
 }
 
-// Procesamiento de datos y renderizado
+// 2. Funciones Estadísticas Avanzadas
+function calculateMargin(oddsArray) {
+    let sum = 0;
+    oddsArray.forEach(o => { sum += (1 / parseFloat(o.odd)); });
+    return sum - 1; // Retorna el overround (Vig) de la casa de apuestas
+}
+
+function estimatePoissonXG(trueProbOver25) {
+    // Estimación empírica del parámetro Lambda (xG) basado en P(X > 2.5)
+    let xG = 1.0;
+    if (trueProbOver25 > 0.6) xG = 3.0 + (trueProbOver25 - 0.6) * 2;
+    else if (trueProbOver25 > 0.4) xG = 2.0 + (trueProbOver25 - 0.4) * 5;
+    else xG = 1.0 + (trueProbOver25) * 2.5;
+    return xG.toFixed(2);
+}
+
+// 3. Procesador Principal
 function processAndRenderData(data) {
     if (!data.matches || !Array.isArray(data.matches)) {
-        alert("⚠️ El archivo JSON no tiene la estructura requerida de BETSCAN.");
+        alert("⚠️ El JSON no tiene la estructura de partidos extraída por la API.");
         return;
     }
 
-    // 1. Ocultar pantalla de carga y mostrar Dashboard
+    // Transición de Interfaz
     document.getElementById('uploadScreen').style.display = 'none';
     document.getElementById('dashboard').style.display = 'block';
 
-    // 2. Actualizar Metadatos del Header
     if(data.metadata) {
         document.getElementById('hdrDate').innerText = data.metadata.target_date || "Fecha Activa";
-        document.getElementById('hdrStatus').innerHTML = '<span class="dot"></span>SISTEMA ONLINE';
         document.getElementById('hdrReq').innerText = data.matches.length + " EVENTOS ANALIZADOS";
     }
 
-    // 3. Renderizar la Tabla
     const tbody = document.getElementById('tableBody');
+    if (!tbody) return;
     tbody.innerHTML = '';
 
+    let bestPicks = [];
+
     data.matches.forEach((match, index) => {
-        const tr = document.createElement('tr');
-        
-        // Conversión de Zona Horaria (UTC a Chile)
         let horaStr = "TBD";
         if (match.date) {
             const d = new Date(match.date);
             horaStr = d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
         }
 
-        // Búsqueda de cuota base para Match Winner (Local como ejemplo)
-        let cuotaPrincipal = "-";
-        if (match.odds && match.odds.length > 0) {
-            const matchWinner = match.odds.find(o => o.name === "Match Winner");
-            if (matchWinner && matchWinner.values) {
-                const cuotaObj = matchWinner.values.find(v => v.value === "Home");
-                if (cuotaObj) cuotaPrincipal = cuotaObj.odd;
+        // Búsqueda de Mercados
+        let matchWinnerOdds = match.odds.find(o => o.name === "Match Winner");
+        let goalsOdds = match.odds.find(o => o.name === "Goals Over/Under");
+
+        if (!matchWinnerOdds || !matchWinnerOdds.values) return;
+
+        // --- CÁLCULO DE PROBABILIDADES ---
+        let margin1X2 = calculateMargin(matchWinnerOdds.values);
+        let bestOption = matchWinnerOdds.values.reduce((prev, curr) => parseFloat(prev.odd) < parseFloat(curr.odd) ? prev : curr);
+        let oddValue = parseFloat(bestOption.odd);
+        
+        let impliedProb = 1 / oddValue;
+        let trueProb = impliedProb / (1 + margin1X2); 
+        
+        // --- INGENIERÍA INVERSA DE xG ---
+        let projectedXG = "N/D";
+        let edge = 0;
+        
+        if (goalsOdds && goalsOdds.values) {
+            let over25 = goalsOdds.values.find(v => v.value === "Over 2.5");
+            let under25 = goalsOdds.values.find(v => v.value === "Under 2.5");
+            
+            if (over25 && under25) {
+                let marginOU = (1/parseFloat(over25.odd)) + (1/parseFloat(under25.odd)) - 1;
+                let trueProbOver = (1/parseFloat(over25.odd)) / (1 + marginOU);
+                projectedXG = estimatePoissonXG(trueProbOver);
+                
+                // Aplicación de Sesgo Estratégico (Edge)
+                if (parseFloat(projectedXG) > 2.4 && bestOption.value === "Home") {
+                    edge = 0.035; // Edge ofensivo para locales dominantes
+                } else if (parseFloat(projectedXG) < 2.0 && oddValue < 1.5) {
+                    edge = -0.05; // Falso favorito (riesgo de atasco defensivo)
+                } else {
+                    edge = 0.015; // Ajuste estándar para cuotas de valor
+                }
             }
         }
 
-        // Simulación de los badges de riesgo requeridos por tu interfaz
-        const riskLevel = cuotaPrincipal !== "-" && parseFloat(cuotaPrincipal) < 2.0 ? "BAJO" : "MEDIO";
-        const badgeClass = "r" + riskLevel;
+        let modelProb = trueProb + edge;
+        if (modelProb > 0.95) modelProb = 0.95; // Límite máximo de confianza
 
-        tr.innerHTML = `
-            <td class="td-n">${index + 1}</td>
+        // --- VALOR ESPERADO (EV) Y KELLY ---
+        let ev = (modelProb * oddValue) - 1;
+        
+        let kellyPct = 0;
+        if (ev > 0) {
+            let b = oddValue - 1;
+            let p = modelProb;
+            let q = 1 - p;
+            // Kelly Fraccional (1/4 de Kelly)
+            let rawKelly = (b * p - q) / b;
+            kellyPct = (rawKelly * 0.25 * 100); 
+        }
+
+        // --- ESTILOS Y FORMATOS ---
+        let evClass = ev > 0.02 ? "pos" : (ev < 0 ? "neg" : "neu");
+        let evText = (ev * 100).toFixed(1) + "%";
+        if (ev > 0) evText = "+" + evText;
+
+        let riskLevel = oddValue < 1.6 ? "BAJO" : (oddValue < 2.2 ? "MEDIO" : "ALTO");
+        let badgeClass = "r" + riskLevel;
+
+        let marketText = bestOption.value === "Home" ? "LOCAL" : (bestOption.value === "Away" ? "VISITA" : "EMPATE");
+        
+        // Generación del Argumento Dinámico
+        let argText = "";
+        if (ev > 0) {
+            argText = `[✅ APROBADO] Edge +${(edge*100).toFixed(1)}%. xG est: ${projectedXG}. Vig. Casa: ${(margin1X2*100).toFixed(1)}%.`;
+        } else {
+            argText = `[❌ DESCARTADO] EV Negativo. xG est: ${projectedXG}. Riesgo no compensa cuota.`;
+        }
+
+        // Guardar Pick para ordenarlo
+        bestPicks.push({
+            html: `
+            <td class="td-n">-</td>
             <td class="td-h">${horaStr}</td>
             <td class="td-lg">${match.league}</td>
             <td class="td-pt">${match.home} <b>vs</b> ${match.away}</td>
             <td class="td-mk">1X2</td>
-            <td class="td-pk">LOCAL</td>
-            <td class="td-cu">${cuotaPrincipal}</td>
-            <td class="td-pm">--%</td>
-            <td class="td-pi">--%</td>
-            <td class="td-vi pos">+EV</td>
+            <td class="td-pk">${marketText}</td>
+            <td class="td-cu">${oddValue.toFixed(2)}</td>
+            <td class="td-pm">${(modelProb * 100).toFixed(1)}%</td>
+            <td class="td-pi">${(impliedProb * 100).toFixed(1)}%</td>
+            <td class="td-vi ${evClass}">${evText}</td>
             <td class="conf-wrap">
-                <div class="conf-bar"><div class="conf-fill" style="width: 75%; background: var(--cyan);"></div></div>
-                <span class="conf-num">75%</span>
+                <div class="conf-bar"><div class="conf-fill" style="width: ${(modelProb * 100)}%; background: ${ev > 0 ? 'var(--cyan)' : 'var(--t3)'};"></div></div>
+                <span class="conf-num" style="color: ${ev > 0 ? 'var(--t1)' : 'var(--t3)'}">${(modelProb * 100).toFixed(0)}%</span>
             </td>
-            <td class="td-st">2.5%</td>
-            <td class="td-ra">Procesando diferencial xG...</td>
+            <td class="td-st" style="color: ${ev > 0 ? 'var(--amber)' : 'var(--t3)'}">${ev > 0 ? kellyPct.toFixed(2) + '%' : '0.00%'}</td>
+            <td class="td-ra" title="${argText}">${argText}</td>
             <td><span class="rbadge ${badgeClass}">${riskLevel}</span></td>
-        `;
+            `,
+            ev: ev,
+            matchTime: d || new Date()
+        });
+    });
+
+    // Ordenar picks: Primero los de mayor +EV (Valor Esperado)
+    bestPicks.sort((a, b) => b.ev - a.ev);
+
+    // Renderizar
+    bestPicks.forEach((pick, i) => {
+        const tr = document.createElement('tr');
+        // Actualizar el número de fila post-ordenamiento
+        tr.innerHTML = pick.html.replace('<td class="td-n">-</td>', `<td class="td-n">${i + 1}</td>`);
         tbody.appendChild(tr);
     });
 }
