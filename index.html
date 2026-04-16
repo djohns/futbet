@@ -1047,5 +1047,98 @@ function loadDemo() {
   showToast('Demo cargado: 5 partidos ficticios');
 }
 </script>
+<script>
+// Manejador del Drag & Drop y Botón de Subida
+function handleFileChange(event) {
+    const file = event.target.files[0] || (event.dataTransfer && event.dataTransfer.files[0]);
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const jsonData = JSON.parse(e.target.result);
+            processAndRenderData(jsonData);
+        } catch (err) {
+            alert("❌ Error: El archivo cargado no es un JSON válido.");
+        }
+    };
+    reader.readAsText(file);
+}
+
+function handleDrop(event) {
+    event.preventDefault();
+    event.currentTarget.classList.remove('over');
+    handleFileChange(event);
+}
+
+// Procesamiento de datos y renderizado
+function processAndRenderData(data) {
+    if (!data.matches || !Array.isArray(data.matches)) {
+        alert("⚠️ El archivo JSON no tiene la estructura requerida de BETSCAN.");
+        return;
+    }
+
+    // 1. Ocultar pantalla de carga y mostrar Dashboard
+    document.getElementById('uploadScreen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+
+    // 2. Actualizar Metadatos del Header
+    if(data.metadata) {
+        document.getElementById('hdrDate').innerText = data.metadata.target_date || "Fecha Activa";
+        document.getElementById('hdrStatus').innerHTML = '<span class="dot"></span>SISTEMA ONLINE';
+        document.getElementById('hdrReq').innerText = data.matches.length + " EVENTOS ANALIZADOS";
+    }
+
+    // 3. Renderizar la Tabla
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '';
+
+    data.matches.forEach((match, index) => {
+        const tr = document.createElement('tr');
+        
+        // Conversión de Zona Horaria (UTC a Chile)
+        let horaStr = "TBD";
+        if (match.date) {
+            const d = new Date(match.date);
+            horaStr = d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Búsqueda de cuota base para Match Winner (Local como ejemplo)
+        let cuotaPrincipal = "-";
+        if (match.odds && match.odds.length > 0) {
+            const matchWinner = match.odds.find(o => o.name === "Match Winner");
+            if (matchWinner && matchWinner.values) {
+                const cuotaObj = matchWinner.values.find(v => v.value === "Home");
+                if (cuotaObj) cuotaPrincipal = cuotaObj.odd;
+            }
+        }
+
+        // Simulación de los badges de riesgo requeridos por tu interfaz
+        const riskLevel = cuotaPrincipal !== "-" && parseFloat(cuotaPrincipal) < 2.0 ? "BAJO" : "MEDIO";
+        const badgeClass = "r" + riskLevel;
+
+        tr.innerHTML = `
+            <td class="td-n">${index + 1}</td>
+            <td class="td-h">${horaStr}</td>
+            <td class="td-lg">${match.league}</td>
+            <td class="td-pt">${match.home} <b>vs</b> ${match.away}</td>
+            <td class="td-mk">1X2</td>
+            <td class="td-pk">LOCAL</td>
+            <td class="td-cu">${cuotaPrincipal}</td>
+            <td class="td-pm">--%</td>
+            <td class="td-pi">--%</td>
+            <td class="td-vi pos">+EV</td>
+            <td class="conf-wrap">
+                <div class="conf-bar"><div class="conf-fill" style="width: 75%; background: var(--cyan);"></div></div>
+                <span class="conf-num">75%</span>
+            </td>
+            <td class="td-st">2.5%</td>
+            <td class="td-ra">Procesando diferencial xG...</td>
+            <td><span class="rbadge ${badgeClass}">${riskLevel}</span></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+</script>
 </body>
 </html>
